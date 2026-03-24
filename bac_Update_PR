@@ -1,8 +1,5 @@
 REPORT zupdate_pr_asset_rap.
  
-*---------------------------------------------------------------------*
-* TYPES
-*---------------------------------------------------------------------*
 TYPES: BEGIN OF ty_input,
          banfn TYPE banfn,
          bnfpo TYPE bnfpo,
@@ -13,74 +10,85 @@ TYPES: BEGIN OF ty_input,
  
 DATA: lt_input TYPE STANDARD TABLE OF ty_input.
  
-*---------------------------------------------------------------------*
-* SAMPLE INPUT (Replace later)
-*---------------------------------------------------------------------*
 lt_input = VALUE #(
   ( banfn = '0040000158' bnfpo = '00010' asset = '3000000304' kostl = '100HN01' menge = 5 )
   ( banfn = '0040000158' bnfpo = '00010' asset = '3000000304' kostl = '102HN01' menge = 5 )
 ).
  
 *---------------------------------------------------------------------*
-* DATA
+* STEP 1: UPDATE ITEM
 *---------------------------------------------------------------------*
 DATA:
-  lt_modify TYPE TABLE FOR MODIFY I_PurchaseRequisitionTP.
+  lt_item TYPE TABLE FOR UPDATE I_PurchaseRequisitionTP\PurchaseRequisitionItem.
  
-DATA(lv_lines) = lines( lt_input ).
- 
-*---------------------------------------------------------------------*
-* BUILD DEEP STRUCTURE (CORRECT RAP WAY)
-*---------------------------------------------------------------------*
 APPEND VALUE #(
   %tky = VALUE #(
     PurchaseRequisition     = lt_input[ 1 ]-banfn
     PurchaseRequisitionItem = lt_input[ 1 ]-bnfpo )
  
-  %data = VALUE #(
-    AccountAssignmentCategory      = 'A'
-    MultipleAcctAssgmtDistribution = COND #( WHEN lv_lines > 1 THEN '2' ELSE '' )
-  )
+  AccountAssignmentCategory      = 'A'
+  MultipleAcctAssgmtDistribution = COND #( WHEN lines( lt_input ) > 1 THEN '2' ELSE '' )
  
-  %control = VALUE #(
-    AccountAssignmentCategory      = if_abap_behv=>mk-on
-    MultipleAcctAssgmtDistribution = if_abap_behv=>mk-on
-  )
+  %control-AccountAssignmentCategory      = if_abap_behv=>mk-on
+  %control-MultipleAcctAssgmtDistribution = if_abap_behv=>mk-on
  
-  "_--- ACCOUNT ASSIGNMENTS (CREATE VIA ASSOCIATION)
-  _PurchaseReqnAcctAssgmt = VALUE #(
-    FOR ls_input IN lt_input (
-      %target = VALUE #(
-        Quantity          = ls_input-menge
-        CostCenter        = ls_input-kostl
-        MasterFixedAsset  = ls_input-asset
+) TO lt_item.
  
-        %control-Quantity          = if_abap_behv=>mk-on
-        %control-CostCenter        = if_abap_behv=>mk-on
-        %control-MasterFixedAsset  = if_abap_behv=>mk-on
-      )
-    )
-  )
- 
-) TO lt_modify.
- 
-*---------------------------------------------------------------------*
-* EXECUTE (SINGLE MODIFY)
-*---------------------------------------------------------------------*
 MODIFY ENTITIES OF I_PurchaseRequisitionTP
   ENTITY PurchaseRequisitionItem
-  UPDATE
-  FROM lt_modify
-  FAILED DATA(lt_failed)
-  REPORTED DATA(lt_reported).
+  UPDATE FROM lt_item
+  FAILED DATA(lt_failed1)
+  REPORTED DATA(lt_reported1).
  
-*---------------------------------------------------------------------*
-* RESULT
-*---------------------------------------------------------------------*
-IF lt_failed IS NOT INITIAL.
-  cl_demo_output=>display( lt_failed ).
+IF lt_failed1 IS NOT INITIAL.
+  cl_demo_output=>display( lt_failed1 ).
   RETURN.
 ENDIF.
  
-cl_demo_output=>display( 'PR updated successfully via RAP' ).
-
+*---------------------------------------------------------------------*
+* STEP 2: CREATE ACCOUNT ASSIGNMENT
+*---------------------------------------------------------------------*
+DATA:
+  lt_acc TYPE TABLE FOR CREATE I_PurchaseRequisitionTP\PurchaseRequisitionItem\_PurchaseReqnAcctAssgmt.
+ 
+DATA(lv_idx) = 0.
+ 
+LOOP AT lt_input INTO DATA(ls_input).
+  lv_idx += 1.
+ 
+  APPEND VALUE #(
+    %tky = VALUE #(
+      PurchaseRequisition     = ls_input-banfn
+      PurchaseRequisitionItem = ls_input-bnfpo )
+ 
+    %target = VALUE #(
+      Quantity          = ls_input-menge
+      CostCenter        = ls_input-kostl
+      MasterFixedAsset  = ls_input-asset
+ 
+      %control-Quantity          = if_abap_behv=>mk-on
+      %control-CostCenter        = if_abap_behv=>mk-on
+      %control-MasterFixedAsset  = if_abap_behv=>mk-on
+    )
+ 
+  ) TO lt_acc.
+ 
+ENDLOOP.
+ 
+MODIFY ENTITIES OF I_PurchaseRequisitionTP
+  ENTITY PurchaseRequisitionItem
+  CREATE BY \_PurchaseReqnAcctAssgmt
+  FROM lt_acc
+  FAILED DATA(lt_failed2)
+  REPORTED DATA(lt_reported2).
+ 
+IF lt_failed2 IS NOT INITIAL.
+  cl_demo_output=>display( lt_failed2 ).
+  RETURN.
+ENDIF.
+ 
+*---------------------------------------------------------------------*
+* SUCCESS
+*---------------------------------------------------------------------*
+cl_demo_output=>display( 'PR updated successfully' ).
+ 
