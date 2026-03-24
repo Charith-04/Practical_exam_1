@@ -1,0 +1,190 @@
+REPORT zupdate_pr_asset.
+ 
+*---------------------------------------------------------------------*
+
+* TYPES
+
+*---------------------------------------------------------------------*
+
+TYPES: BEGIN OF ty_input,
+
+         banfn TYPE banfn,
+
+         bnfpo TYPE bnfpo,
+
+         asset TYPE anln1,
+
+         subno TYPE anln2,
+
+         kostl TYPE kostl,
+
+         menge TYPE menge_d,
+
+       END OF ty_input.
+ 
+DATA: lt_input TYPE STANDARD TABLE OF ty_input,
+
+      ls_input TYPE ty_input.
+ 
+*---------------------------------------------------------------------*
+
+* SAMPLE INPUT (replace with selection screen / file / ALV)
+
+*---------------------------------------------------------------------*
+
+lt_input = VALUE #(
+
+  ( banfn = '0040000158' bnfpo = '00010' asset = '3000000304' subno = '0000' kostl = '100HN01' menge = 5 )
+
+  ( banfn = '0040000158' bnfpo = '00010' asset = '3000000304' subno = '0000' kostl = '102HN01' menge = 5 )
+
+).
+ 
+*---------------------------------------------------------------------*
+
+* DATA
+
+*---------------------------------------------------------------------*
+
+DATA:
+
+  lt_upd_item TYPE TABLE FOR UPDATE i_purchaserequisitiontp\purchaserequisitionitem,
+
+  lt_upd_acc  TYPE TABLE FOR UPDATE i_purchaserequisitiontp\purchreqitmaccountassignment,
+
+  lt_cre_acc  TYPE TABLE FOR CREATE i_purchaserequisitiontp\purchasereqnacctassgmt.
+ 
+DATA:
+
+  lt_failed       TYPE RESPONSE FOR FAILED i_purchaserequisitiontp,
+
+  lt_reported     TYPE RESPONSE FOR REPORTED i_purchaserequisitiontp,
+
+  lt_failed_acc   TYPE RESPONSE FOR FAILED i_purchaserequisitiontp,
+
+  lt_reported_acc TYPE RESPONSE FOR REPORTED i_purchaserequisitiontp.
+ 
+*---------------------------------------------------------------------*
+
+* STEP 1: UPDATE ITEM (SET KNTTP = A)
+
+*---------------------------------------------------------------------*
+
+DATA(lv_lines) = lines( lt_input ).
+ 
+APPEND VALUE #(
+
+  %tky = VALUE #(
+
+    purchaserequisition      = lt_input[ 1 ]-banfn
+
+    purchaserequisitionitem  = lt_input[ 1 ]-bnfpo )
+
+  AccountAssignmentCategory          = 'A'
+
+  MultipleAcctAssgmtDistribution     = COND #( WHEN lv_lines > 1 THEN '2' ELSE '' )
+
+  %control-AccountAssignmentCategory      = if_abap_behv=>mk-on
+
+  %control-MultipleAcctAssgmtDistribution = if_abap_behv=>mk-on
+
+) TO lt_upd_item.
+ 
+MODIFY ENTITIES OF i_purchaserequisitiontp
+
+  ENTITY purchaserequisitionitem
+
+  UPDATE FIELDS ( AccountAssignmentCategory MultipleAcctAssgmtDistribution )
+
+  WITH lt_upd_item
+
+  FAILED lt_failed
+
+  REPORTED lt_reported.
+ 
+IF lt_failed IS NOT INITIAL.
+
+  cl_demo_output=>display( lt_failed ).
+
+  RETURN.
+
+ENDIF.
+ 
+*---------------------------------------------------------------------*
+
+* STEP 2: PREPARE ACCOUNT ASSIGNMENT DATA
+
+*---------------------------------------------------------------------*
+
+DATA(lv_idx) = 0.
+ 
+LOOP AT lt_input INTO ls_input.
+
+  lv_idx += 1.
+ 
+  APPEND VALUE #(
+
+    %tky = VALUE #(
+
+      purchaserequisition           = ls_input-banfn
+
+      purchaserequisitionitem       = ls_input-bnfpo
+
+      purchasereqnacctassgmtnumber  = lv_idx )
+ 
+    Quantity                  = ls_input-menge
+
+    CostCenter               = ls_input-kostl
+
+    MasterFixedAsset         = ls_input-asset
+
+    MasterFixedAssetSubNumber = ls_input-subno
+ 
+    %control-Quantity                  = if_abap_behv=>mk-on
+
+    %control-CostCenter               = if_abap_behv=>mk-on
+
+    %control-MasterFixedAsset         = if_abap_behv=>mk-on
+
+    %control-MasterFixedAssetSubNumber = if_abap_behv=>mk-on
+ 
+  ) TO lt_cre_acc.
+ 
+ENDLOOP.
+ 
+*---------------------------------------------------------------------*
+
+* STEP 3: CREATE ACCOUNT ASSIGNMENTS
+
+*---------------------------------------------------------------------*
+
+MODIFY ENTITIES OF i_purchaserequisitiontp
+
+  ENTITY purchaserequisitionitem
+
+  CREATE BY \_purchasereqnacctassgmt
+
+  FIELDS ( Quantity CostCenter MasterFixedAsset MasterFixedAssetSubNumber )
+
+  WITH lt_cre_acc
+
+  FAILED lt_failed_acc
+
+  REPORTED lt_reported_acc.
+ 
+IF lt_failed_acc IS NOT INITIAL.
+
+  cl_demo_output=>display( lt_failed_acc ).
+
+  RETURN.
+
+ENDIF.
+ 
+*---------------------------------------------------------------------*
+
+* SUCCESS OUTPUT
+
+*---------------------------------------------------------------------*
+
+cl_demo_output=>display( 'PR updated successfully' ).
+ 
