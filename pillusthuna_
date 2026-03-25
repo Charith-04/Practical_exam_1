@@ -1,0 +1,1035 @@
+class ZCL_FIAF27_SOLPEDAF definition
+  public
+  final
+  create public .
+
+public section.
+
+  types:
+    BEGIN OF ty_final,
+        banfn      TYPE banfn,
+        bnfpo      TYPE bnfpo,
+        bsart      TYPE bsart,
+        knttp      TYPE knttp,
+        lifnr      TYPE lifnr,
+        matnr      TYPE matnr,
+        ekgrp      TYPE ekgrp,
+        werks      TYPE werks,
+        waers      TYPE waers,
+        preis      TYPE preis,
+        zebkn      TYPE dzebkn,
+        kostl      TYPE kostl,
+        anln1      TYPE anln1,
+        menge      TYPE bamng,
+        ps_psp_pnr TYPE ps_psp_pnr,
+        comentario TYPE char100,
+        meins      TYPE meins,
+      END OF ty_final .
+  types:
+    ty_t_final TYPE STANDARD TABLE OF ty_final WITH EMPTY KEY .
+  types:
+    BEGIN OF ty_sociedad,
+        bukrs TYPE t001k-bukrs,
+        bwkey TYPE t001k-bwkey,
+      END OF ty_sociedad .
+  types TY_CLASE_ACTIVOS type ZTCLASE_AF .
+  types:
+    BEGIN OF ty_materials,
+        matnr TYPE makt-matnr,
+        desc  TYPE makt-maktx,
+      END OF ty_materials .
+  types:
+    BEGIN OF ty_centro_coste,
+        costcenter TYPE i_purreqnacctassgmtapi01-costcenter,
+      END OF ty_centro_coste .
+  types:
+    ty_t_sociedad TYPE STANDARD TABLE OF ty_sociedad WITH EMPTY KEY .
+  types:
+    ty_t_clase_activos TYPE STANDARD TABLE OF ty_clase_activos WITH EMPTY KEY .
+  types:
+    ty_t_materials TYPE STANDARD TABLE OF ty_materials WITH EMPTY KEY .
+  types:
+    ty_t_centro_coste TYPE STANDARD TABLE OF ty_centro_coste WITH EMPTY KEY .
+  types:
+    BEGIN OF ty_act_fijo,
+        valuationclass TYPE i_productvaluationbasic-valuationclass, "bklas = ValuationClass MBEW = I_ProductValuationBasic
+        material       TYPE i_purchaserequisitionitem-material, "matnr = Material EBAN = I_PurchaseRequisitionItem
+        plant          TYPE i_purchaserequisitionitem-plant,
+      END OF ty_act_fijo .
+  types:
+    ty_t_act_fijo TYPE STANDARD TABLE OF ty_act_fijo WITH EMPTY KEY .
+  types:
+    BEGIN OF ty_purchase_req,
+        purchaserequisition          TYPE i_purchaserequisitionitem-purchaserequisition, "I_PurchaseRequisitionItem-PurchaseRequisition
+        purchaserequisitionitem      TYPE i_purchaserequisitionitem-purchaserequisitionitem, "I_PurchaseRequisitionItem-PurchaseRequisitionItem
+        purchaserequisitiontype      TYPE i_purchaserequisitionitem-purchaserequisitiontype, "I_PurchaseRequisitionItem-PurchaseRequisitionType
+        supplier                     TYPE i_purchaserequisitionitem-supplier, "I_PurchaseRequisitionItem-Supplier
+        material                     TYPE i_purchaserequisitionitem-material, "I_PurchaseRequisitionItem-Material
+        purchasinggroup              TYPE i_purchaserequisitionitem-purchasinggroup, "I_PurchaseRequisitionItem-PurchasingGroup
+        plant                        TYPE i_purchaserequisitionitem-plant, "I_PurchaseRequisitionItem-Plant
+        purreqnitemcurrency          TYPE i_purchaserequisitionitem-purreqnitemcurrency, "I_PurchaseRequisitionItem-PurReqnItemCurrency
+        accountassignmentcategory     TYPE i_purchaserequisitionitem-accountassignmentcategory, "I_PurchaseRequisitionItem-AccountAssignmentCategory
+        costcenter                   TYPE ebkn-kostl,
+        masterfixedasset             TYPE ebkn-anln1,
+        quantity                     TYPE ebkn-menge,
+        purreqnnetamount             TYPE eban-preis, "I_PurchaseRequisitionItem-PurchaseRequisitionPrice
+        wbselementinternalid         TYPE ebkn-ps_psp_pnr,
+        purchasereqnacctassgmtnumber TYPE ebkn-zebkn,
+        comentario                   TYPE ztactivos_fijos-comentario,
+        BaseUnitISOCode              TYPE A_PurchaseRequisitionItem_2-BaseUnitISOCode,
+      END OF ty_purchase_req .
+  types:
+    ty_t_purchase_req TYPE STANDARD TABLE OF ty_purchase_req WITH EMPTY KEY .
+  types:
+    ty_t_return TYPE STANDARD TABLE OF  bapiret2 WITH DEFAULT KEY .
+  types:
+    ty_t_pritem TYPE STANDARD TABLE OF bapimereqitemimp WITH DEFAULT KEY .
+  types:
+    ty_t_pritemx TYPE STANDARD TABLE OF bapimereqitemx WITH DEFAULT KEY .
+  types:
+    ty_t_praccount TYPE STANDARD TABLE OF bapimereqaccount WITH DEFAULT KEY .
+  types:
+    ty_t_praccountx TYPE STANDARD TABLE OF bapimereqaccountx WITH DEFAULT KEY .
+  types:
+    tr_banfn TYPE RANGE OF banfn .
+  types:
+    tr_ekgrp TYPE RANGE OF ekgrp .
+  types:
+    tr_werks TYPE RANGE OF ewerk .
+  types:
+    tr_kostl TYPE RANGE OF kostl .
+  types:
+    tr_erdat TYPE RANGE OF erdat .
+  types:
+    tr_bnfpo TYPE RANGE OF bnfpo .
+  types:
+    BEGIN OF ty_asset,
+        asset TYPE anln1 ,
+        cc TYPE ebkn-kostl,
+      END OF ty_asset .
+  types:
+    ty_t_asset TYPE STANDARD TABLE OF ty_asset WITH EMPTY KEY .
+
+*    methods get_etag
+*     IMPORTING  io_http TYPE REF TO  if_web_http_client
+*                iv_entity_url TYPE string
+*          RETURNING VALUE(rv_etag) TYPE string
+*          RAISING
+*            cx_web_http_client_error.
+  constants LC_TOKEN type STRING value 'x-csrf-token' ##NO_TEXT.
+  constants LC_FETCH type STRING value 'fetch' ##NO_TEXT.
+  constants LC_ACCEPT type STRING value 'accept' ##NO_TEXT.
+  constants LC_APPJ type STRING value 'application/json' ##NO_TEXT.
+  constants LC_ETAG type STRING value 'Etag' ##NO_TEXT.
+  constants LC_URI type STRING value '~request_uri' ##NO_TEXT.
+  constants LC_GET type STRING value 'GET' ##NO_TEXT.
+
+  methods SELECT_DATA_FROM_MAIN_CDS
+    importing
+      value(IV_BANFN) type TR_BANFN
+      value(IV_EKGRP) type TR_EKGRP optional
+      value(IV_WERKS) type TR_WERKS optional
+      value(IV_KOSTL) type TR_KOSTL optional
+      value(IV_ERDAT) type TR_ERDAT optional
+      value(IV_BNFPO) type TR_BNFPO optional
+      value(IV_KNTTP) type KNTTP default 'Y'
+    returning
+      value(RT_PURCHASE_REQ) type TY_T_PURCHASE_REQ .
+  methods SELECT_DATA_FOR_ASSETS
+    importing
+      !IT_PURCHASE_REQ type TY_T_PURCHASE_REQ .
+  methods VALIDATE_ASSETS
+    importing
+      !IS_PURCHASE_REQ type TY_PURCHASE_REQ
+    exporting
+      !EV_MSG type STRING
+    returning
+      value(RV_IS_VALID) type CHAR1 .
+  methods ADD_TO_FINAL_TABLE
+    importing
+      !IS_PURCHASE_REQ type TY_PURCHASE_REQ
+      !IV_MSG type STRING .
+  methods CREATE_SINGLE_ASSET
+    importing
+      !IS_PURCHASE_REQ type TY_PURCHASE_REQ
+      !IV_COMMIT type CHAR1 default 'X'
+    exporting
+      !EV_ASSET type ANLN1
+      !EV_SUB_NUM type ANLN2
+      !ET_RETURN type BAPIRET2_T .
+  methods UPDATE_SOLPED_BAPI
+    importing
+      !IS_PURCHASE_REQ type TY_PURCHASE_REQ
+      !IT_PRITEM type TY_T_PRITEM
+      !IT_PRITEMX type TY_T_PRITEMX
+      !IT_PRACCOUNT type TY_T_PRACCOUNT
+      !IT_PRACCOUNTX type TY_T_PRACCOUNTX
+    exporting
+      !EV_SUCCESS type CHAR1
+      !EV_MSG type STRING .
+    " !IV_AA_CAT type I_PURCHASEREQUISITIONITEM-ACCOUNTASSIGNMENTCATEGORY
+  methods UPDATE_PURCHASE_REQUISITION
+    importing
+      !IV_RFC_DEST type C
+      !IV_PR type I_PURCHASEREQUISITIONITEM-PURCHASEREQUISITION
+      !IV_PR_ITEM type I_PURCHASEREQUISITIONITEM-PURCHASEREQUISITIONITEM
+      !IV_AA_CAT type KNTTP
+      !IV_AA_NUMBER type EBKN-ZEBKN
+      !IV_ASSET type TY_T_ASSET
+      !IV_ISOCODE type A_PURCHASEREQUISITIONITEM_2-BASEUNITISOCODE
+      !IV_ASSIGNMENTS type EBKN-ZEBKN
+    returning
+      value(EV_RES) type STRING .
+  methods GET_CSRF_TOKEN
+    importing
+      !IO_CLIENT type ref to IF_HTTP_CLIENT
+      !IV_ROOT type STRING
+    exporting
+      value(EV_CSRF) type STRING
+      value(EV_COOKIE) type STRING
+    raising
+      CX_ROOT .
+  methods DELETE_FROM_FINAL_TABLE
+    importing
+      !IV_PR type BANFN
+      !IV_ITEM type BNFPO .
+  methods REPROCESS_LOG_TABLE
+    importing
+      value(IV_PR) type TR_BANFN
+      value(IV_ITEM) type TR_BNFPO
+    returning
+      value(RT_PURCHASE_REQ) type TY_T_PURCHASE_REQ .
+  PROTECTED SECTION.
+private section.
+
+  data MT_SOCIEDAD type TY_T_SOCIEDAD .
+  data MT_BKLAS type TY_T_ACT_FIJO .
+  data MT_CLASE_ACTIVOS type TY_T_CLASE_ACTIVOS .
+  data MT_MATERIAL type TY_T_MATERIALS .
+  data MT_CENTRO_COSTE type TY_T_CENTRO_COSTE .
+ENDCLASS.
+
+
+
+CLASS ZCL_FIAF27_SOLPEDAF IMPLEMENTATION.
+
+
+  METHOD select_data_for_assets.
+
+    IF it_purchase_req IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    "llenar atributo MT_SOCIEDAD
+    SELECT companycode, valuationarea   "BUKRS = CompanyCode
+      FROM i_valuationarea INTO TABLE @mt_sociedad "t001k = I_ValuationArea
+      FOR ALL ENTRIES IN @it_purchase_req
+      WHERE valuationarea = @it_purchase_req-plant. "ValuationArea bwkey
+
+    "llenar atributo MT_MATERIAL
+    SELECT material, materialname "matnr = Material , maktx = MaterialName
+      FROM i_materialtext INTO TABLE @mt_material "MAKT = I_MaterialText
+      FOR ALL ENTRIES IN @it_purchase_req
+      WHERE material = @it_purchase_req-material
+      AND language = 'S'. "spras = Language
+
+    "llenar atributo MT_CENTRO_COSTE
+    SELECT costcenter
+      FROM i_purreqnacctassgmtapi01 INTO TABLE @mt_centro_coste
+      FOR ALL ENTRIES IN @it_purchase_req
+      WHERE costcenter = @it_purchase_req-costcenter.
+
+
+    "llenar atributo MT_BKLAS
+    SELECT valuationclass, product, valuationarea FROM i_productvaluationbasic "MBEW = I_ProductValuationBasic BKLAS = ValuationClass MATNR = Product BWKEY = ValuationArea
+      INTO TABLE @mt_bklas
+      FOR ALL ENTRIES IN @it_purchase_req
+      WHERE product = @it_purchase_req-material
+      AND valuationarea = @it_purchase_req-plant.
+
+
+
+    "llenar el atributo MT_CLASE_ACTIVOS
+    IF mt_bklas IS NOT INITIAL.
+
+      SELECT *
+        FROM ztclase_af
+        INTO TABLE @mt_clase_activos
+        FOR ALL ENTRIES IN @mt_bklas
+        WHERE bklas = @mt_bklas-valuationclass.
+
+    ENDIF.
+
+  ENDMETHOD.
+
+
+  METHOD select_data_from_main_cds.
+    TYPES: tr_knttp TYPE RANGE OF knttp.
+    DATA: lt_purchase_req TYPE TABLE OF ty_purchase_req,
+          lt_knttp TYPE tr_knttp.
+
+    CLEAR lt_purchase_req.
+
+    APPEND VALUE #( sign = 'I' option = 'EQ' low = iv_knttp ) TO lt_knttp.
+
+    SELECT a~purchaserequisition, a~purchaserequisitionitem, a~purchaserequisitiontype,
+      a~supplier, a~material, a~purchasinggroup,
+       a~plant, a~purreqnitemcurrency, a~accountassignmentcategory,
+      c~costcenter, c~masterfixedasset, c~quantity, c~purreqnnetamount,
+      c~wbselementinternalid, c~purchasereqnacctassgmtnumber, d~UnitOfMeasureISOCode as BaseUnitISOCode
+      FROM i_purchaserequisitionitemapi01 AS a
+      LEFT OUTER JOIN i_purreqnacctassgmtapi01 AS c ON
+      a~purchaserequisition = c~purchaserequisition
+      AND a~purchaserequisitionitem = c~purchaserequisitionitem
+      LEFT OUTER JOIN I_UnitOfMeasure as d ON d~UnitOfMeasure = a~BaseUnit
+      WHERE a~isdeleted = ' '
+      AND a~accountassignmentcategory = 'Y' " replaced 'Y' with range variable which contain default value as 'Y'
+      AND a~purchaserequisition IN @iv_banfn
+      AND a~purchasinggroup IN @iv_ekgrp
+      AND a~creationdate IN @iv_erdat
+      AND c~costcenter IN @iv_kostl
+      AND a~plant IN @iv_werks
+      AND a~PurchaseRequisitionItem IN @iv_bnfpo " insert by srividwan
+      INTO CORRESPONDING FIELDS OF TABLE @lt_purchase_req.
+
+    CLEAR rt_purchase_req.
+
+    rt_purchase_req = lt_purchase_req.
+
+
+  ENDMETHOD.
+
+
+  METHOD add_to_final_table.
+
+    TYPES: BEGIN OF ty_final,
+             banfn      TYPE ztactivos_fijos-banfn,
+             bnfpo      TYPE ztactivos_fijos-bnfpo,
+             bsart      TYPE ztactivos_fijos-bsart,
+             knttp      TYPE ztactivos_fijos-knttp,
+             lifnr      TYPE ztactivos_fijos-lifnr,
+             matnr      TYPE ztactivos_fijos-matnr,
+             ekgrp      TYPE ztactivos_fijos-ekgrp,
+             werks      TYPE ztactivos_fijos-werks,
+             waers      TYPE ztactivos_fijos-waers,
+             preis      TYPE ztactivos_fijos-preis,
+             zebkn      TYPE ztactivos_fijos-zebkn,
+             kostl      TYPE ztactivos_fijos-kostl,
+             anln1      TYPE ztactivos_fijos-anln1,
+             menge      TYPE ztactivos_fijos-menge,
+             ps_psp_pnr TYPE ztactivos_fijos-ps_psp_pnr,
+             comentario TYPE ztactivos_fijos-comentario,
+             meins      TYPE ztactivos_fijos-meins,
+
+           END OF ty_final.
+
+    DATA:
+      ls_final TYPE ztactivos_fijos.
+*        lt_final TYPE TABLE OF ty_final,
+*        ls_purchase_req TYPE ty_purchase_req,
+*        lt_purchase_req TYPE ty_t_purchase_req.
+
+    ls_final-banfn = is_purchase_req-purchaserequisition.
+    ls_final-bnfpo = is_purchase_req-purchaserequisitionitem.
+    ls_final-bsart = is_purchase_req-purchaserequisitiontype.
+    ls_final-knttp = is_purchase_req-accountassignmentcategory.
+    ls_final-lifnr = is_purchase_req-supplier.
+    ls_final-matnr = is_purchase_req-material.
+    ls_final-ekgrp = is_purchase_req-purchasinggroup.
+    ls_final-werks = is_purchase_req-plant.
+    ls_final-waers = is_purchase_req-purreqnitemcurrency.
+    ls_final-preis = is_purchase_req-purreqnnetamount.
+    ls_final-zebkn = is_purchase_req-purchasereqnacctassgmtnumber.
+    ls_final-kostl = is_purchase_req-costcenter.
+    ls_final-anln1 = is_purchase_req-masterfixedasset.
+    ls_final-menge = is_purchase_req-quantity.
+    ls_final-ps_psp_pnr = is_purchase_req-wbselementinternalid.
+    ls_final-comentario = iv_msg.
+*  ls_final-meins = 'C/U'.
+
+    MODIFY ztactivos_fijos FROM ls_final.
+
+
+  ENDMETHOD.
+
+
+  METHOD validate_assets.
+
+    DATA:
+      ls_companycode   TYPE bapi1022_1-comp_code,
+      ls_clase_activos TYPE ty_clase_activos,
+      ls_materials     TYPE ty_materials,
+      ls_centro_coste  TYPE ty_centro_coste,
+*   ls_purchase_req TYPE ty_purchase_req,
+      lt_purchase_req  TYPE ty_t_purchase_req,
+      lt_act_fijo      TYPE ty_t_act_fijo,
+      ls_act_fijo      TYPE ty_act_fijo.
+*    lv_validate TYPE i,
+*    lv_net_value          TYPE p LENGTH 15 DECIMALS 9,
+*    lv_counter            TYPE i,
+*    ls_generaldata TYPE bapi1022_feglg001,
+*    ls_generaldatax TYPE bapi1022_feglg001X,
+*    ls_timedependentdata TYPE bapi1022_feglg003,
+*    ls_timedependentdatax TYPE bapi1022_feglg003X,
+*    ls_return TYPE bapiret2,
+*    ls_assetcreated TYPE bapi1022_reference,
+*    lv_comentario TYPE c LENGTH 100.
+*    DATA(lo_bapi_create) = NEW zcl_bapi_fixedasset_create( ).
+*    DATA(lo_bapi_commit_and_rollback) = NEW zcl_bapi_commit_and_rollback( ).
+
+
+    rv_is_valid = 'X'.
+    CLEAR ev_msg.
+
+    "validar sociedad
+    READ TABLE mt_sociedad INTO ls_companycode WITH KEY bwkey = is_purchase_req-plant.
+    IF sy-subrc <> 0.
+      MESSAGE i004(zfi) INTO ev_msg.
+
+      me->add_to_final_table(
+    is_purchase_req = is_purchase_req iv_msg = ev_msg ).
+
+      rv_is_valid = ' '.
+    ENDIF.
+
+    CHECK rv_is_valid = 'X'.
+
+
+    "validar bklas y clase activo
+    READ TABLE mt_bklas INTO ls_act_fijo WITH KEY material = is_purchase_req-material plant = is_purchase_req-plant.
+    READ TABLE mt_clase_activos INTO ls_clase_activos WITH KEY bklas = ls_act_fijo-valuationclass.
+    IF sy-subrc <> 0.
+      MESSAGE i005(zfi) INTO ev_msg.
+
+      me->add_to_final_table(
+    is_purchase_req = is_purchase_req
+    iv_msg = ev_msg ).
+
+      rv_is_valid = ' '.
+    ENDIF.
+
+    CHECK rv_is_valid = 'X'.
+
+*  ls_generaldata-assetclass = ls_clase_activos-anlkl.
+
+    "validar descrpcion material
+    READ TABLE mt_material INTO ls_materials WITH KEY matnr = is_purchase_req-material.
+    IF sy-subrc <> 0.
+      MESSAGE i006(zfi) INTO ev_msg.
+      me->add_to_final_table(
+    is_purchase_req = is_purchase_req
+    iv_msg = ev_msg ).
+
+
+      rv_is_valid = ' '.
+    ENDIF.
+
+    CHECK rv_is_valid = 'X'.
+*ls_generaldata-descript = ls_materials-matnr.
+    "validar centro de coste
+    READ TABLE mt_centro_coste INTO ls_centro_coste WITH KEY costcenter = is_purchase_req-costcenter.
+    IF sy-subrc <> 0.
+      MESSAGE i007(zfi) INTO ev_msg.
+      me->add_to_final_table(
+    is_purchase_req = is_purchase_req
+    iv_msg = ev_msg ).
+
+      rv_is_valid = ' '.
+    ENDIF.
+
+    CHECK rv_is_valid = 'X'.
+
+*IF lv_validate = 0.
+*  lv_net_value = ls_purchase_req-purreqnnetamount / ls_purchase_req-quantity.
+*   DO ls_purchase_req-quantity TIMES.
+*     lv_counter = sy-index.
+*
+*
+*
+*lo_bapi_create->llamada_bapi_fiaf27(
+*EXPORTING
+*  COMPANYCODE = ls_companycode
+*  generaldata    = ls_generaldata
+*  generaldatax       = ls_generaldatax
+*  timedependentdata  = ls_timedependentdata
+*  timedependentdatax = ls_timedependentdatax
+*IMPORTING
+*  assetcreated       = ls_assetcreated
+*      return = ls_return
+*  ).
+*
+*IF ls_return-type <> 'E'.
+*
+*lo_bapi_commit_and_rollback->llamar_bapi_transaction_commit(
+*EXPORTING
+*  wait = abap_true
+*
+*).
+*
+*ELSE.
+*  lv_comentario = ls_return-message.
+*
+*lo_bapi_commit_and_rollback->llamar_bapi_rollback(
+*IMPORTING
+*  return = ls_return
+*).
+*
+* me->add_to_final_table(
+*  it_purchase_req = lt_purchase_req ).
+*
+*ENDIF.
+*     ENDDO.
+*     ENDIF.
+
+  ENDMETHOD.
+
+
+  METHOD create_single_asset.
+
+    DATA: ls_gen           TYPE bapi1022_feglg001,
+          ls_genx          TYPE bapi1022_feglg001x,
+          ls_time          TYPE bapi1022_feglg003,
+          ls_timex         TYPE bapi1022_feglg003x,
+          ls_comp          TYPE bapi1022_1-comp_code,
+          ls_return_bapi   TYPE bapiret2,
+          ls_asset_created TYPE bapi1022_reference.
+
+    " Variables locales
+    DATA: ls_sociedad TYPE ty_sociedad,
+          ls_bklas    TYPE ty_act_fijo,
+          ls_clase_af TYPE ty_clase_activos,
+          ls_material TYPE ty_materials.
+
+    CLEAR: ev_asset, ev_sub_num, et_return.
+
+    " --- MAPEO ---
+    READ TABLE mt_sociedad INTO ls_sociedad WITH KEY bwkey = is_purchase_req-plant.
+    ls_comp = ls_sociedad-bukrs.
+
+    READ TABLE mt_bklas INTO ls_bklas WITH KEY material = is_purchase_req-material plant = is_purchase_req-plant.
+    READ TABLE mt_clase_activos INTO ls_clase_af WITH KEY bklas = ls_bklas-valuationclass.
+    ls_gen-assetclass = ls_clase_af-anlkl.
+    ls_genx-assetclass = abap_true.
+
+    READ TABLE mt_material INTO ls_material WITH KEY matnr = is_purchase_req-material.
+    IF sy-subrc = 0.
+      ls_gen-descript = ls_material-desc.
+    ELSE.
+      ls_gen-descript = is_purchase_req-material.
+    ENDIF.
+    ls_genx-descript = abap_true.
+
+    ls_time-costcenter = is_purchase_req-costcenter.
+    ls_timex-costcenter = abap_true.
+
+    " --- LLAMADA BAPI ---
+    CALL FUNCTION 'BAPI_FIXEDASSET_CREATE' DESTINATION 'NONE'
+      EXPORTING
+        companycode        = ls_comp
+        generaldata        = ls_gen
+        generaldatax       = ls_genx
+        timedependentdata  = ls_time
+        timedependentdatax = ls_timex
+      IMPORTING
+        assetcreated       = ls_asset_created
+        return             = ls_return_bapi.
+
+    " --- GESTION RETORNO ---
+    IF ls_return_bapi-type = 'E' OR ls_return_bapi-type = 'A'.
+      APPEND ls_return_bapi TO et_return.
+*      CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
+    ELSE.
+      ev_asset   = ls_asset_created-asset.
+      ev_sub_num = ls_asset_created-subnumber.
+      IF iv_commit = 'X'.
+*      CALL FUNCTION 'BAPI_TRANSACTION_COMMIT' EXPORTING wait = abap_true.
+      ENDIF.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD update_solped_bapi.
+
+    DATA: lt_return TYPE TABLE OF bapiret2.
+
+    CLEAR: ev_success, ev_msg.
+
+    " Llamada a la BAPI
+    CALL FUNCTION 'BAPI_PR_CHANGE'
+      EXPORTING
+        number     = is_purchase_req-purchaserequisition
+      TABLES
+        return     = lt_return
+        pritem     = it_pritem
+        pritemx    = it_pritemx
+        praccount  = it_praccount
+        praccountx = it_praccountx.
+
+    " Verificar errores
+    DATA: lv_error TYPE abap_bool.
+
+    LOOP AT lt_return INTO DATA(ls_ret) WHERE type = 'E' OR type = 'A'.
+      lv_error = abap_true.
+      ev_msg   = ls_ret-message. " Devolvemos el mensaje al reporte
+      EXIT.
+    ENDLOOP.
+
+    IF lv_error = abap_true.
+      CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
+
+      " Guardar Error en Tabla Z (llamada interna)
+      me->add_to_final_table( is_purchase_req = is_purchase_req iv_msg = ev_msg ).
+
+      ev_success = ' '. " Falso
+
+    ELSE.
+      CALL FUNCTION 'BAPI_TRANSACTION_COMMIT' EXPORTING wait = abap_true.
+
+      " ÉXITO: Borrar de tabla Z si existía
+      DATA: ls_zdb TYPE ztactivos_fijos.
+      ls_zdb-banfn = is_purchase_req-purchaserequisition.
+      ls_zdb-bnfpo = is_purchase_req-purchaserequisitionitem.
+
+      DELETE FROM ztactivos_fijos
+        WHERE banfn = ls_zdb-banfn
+          AND bnfpo = ls_zdb-bnfpo.
+
+      ev_success = 'X'. " Verdadero
+      ev_msg = 'Solped actualizada correctamente'.
+    ENDIF.
+
+
+
+  ENDMETHOD.
+
+
+  METHOD get_csrf_token.
+    DATA : lo_req    TYPE REF TO if_http_request,
+           lo_res    TYPE REF TO if_http_response,
+           lt_fields TYPE tihttpnvp,
+           ls_field  TYPE ihttpnvp.
+
+    lo_req->set_method( lc_get ).
+    lo_req->set_header_field( name = lc_token value = lc_fetch ).
+    lo_req->set_header_field( name = lc_accept value = lc_appj ).
+    lo_req->set_header_field( name = lc_uri value = iv_root ).
+
+    io_client->send(  ).
+    io_client->receive(  ).
+
+    "Read token
+
+    ev_csrf = io_client->response->get_header_field( lc_token ).
+
+    "Read cookie
+    io_client->response->get_header_fields( CHANGING fields = lt_fields ).
+    LOOP AT lt_fields INTO ls_field WHERE name = 'Set-Cookie'.
+      IF ev_cookie IS INITIAL.
+        ev_cookie = ls_field-value.
+      ELSE.
+        ev_cookie = ev_cookie && ';' && ls_field-value.
+      ENDIF.
+    ENDLOOP.
+* *   lo_res = io_http->execute( i_method = if_web_http_client=>get ).
+
+*   IF lo_res->get_status(  )-code BETWEEN 200 AND 299.
+*   rv_csrf = lo_res->get_header_field( lc_token ).
+
+*   IF rv_csrf IS INITIAL.
+*   RAISE EXCEPTION TYPE cx_static_check
+*     EXPORTING msgv1 = |CSRF token missing in response headers.|.
+*   ENDIF.
+*   ELSE.
+*    RAISE EXCEPTION TYPE cx_static_check
+*     EXPORTING msgv1 = |CSRF fetch failed: { lo_res->get_status(  )-code } { lo_res->get_status(  )-reason }|.
+*   ENDIF.
+  ENDMETHOD.
+
+
+  METHOD update_purchase_requisition.
+
+    DATA: lo_http    TYPE REF TO if_http_client,
+          lo_http1   TYPE REF TO if_http_client,
+          io_client  TYPE REF TO if_http_client,
+          lo_csrf    TYPE REF TO zcl_fiaf27_solpedaf,
+          iv_root    TYPE string,
+          lv_csrf    TYPE string,
+          lv_cookie  TYPE string,
+          lv_etag    TYPE string,
+          lo_req     TYPE REF TO if_http_request,
+          lo_res     TYPE REF TO if_http_response,
+          lt_fields  TYPE tihttpnvp,
+          lt_cookies TYPE tihttpcki,
+          ls_field   TYPE ihttpnvp,
+          lv_lang    TYPE string,
+          lv_mandt   TYPE string,
+          lv_cr_lf   TYPE string.
+    CONSTANTS: lc_a TYPE c LENGTH 1 VALUE 'A'.
+
+    IF lc_a = ' '.
+    lv_cr_lf = cl_abap_char_utilities=>cr_lf.
+    lv_mandt = CONV #( sy-mandt ).
+    CALL METHOD cl_i18n_languages=>sap1_to_iso639_1
+      EXPORTING
+        im_lang_sap1   = sy-langu             " SAP Language code
+      IMPORTING
+        ex_lang_iso639 = DATA(lv_langu).            " Language according to ISO 639.
+    lv_lang = CONV #( lv_langu ).
+
+    " Create http client using RFC destination for Get calls
+    cl_http_client=>create_by_destination(
+  EXPORTING
+    destination              = iv_rfc_dest
+  IMPORTING
+    client                   = io_client
+  EXCEPTIONS
+    argument_not_found       = 1
+    destination_not_found    = 2
+    destination_no_authority = 3
+    plugin_not_active        = 4
+    internal_error           = 5
+    OTHERS                   = 6
+)
+.
+    io_client->request->set_method( if_http_request=>co_request_method_get ).
+    io_client->request->set_header_field( name = lc_token value = lc_fetch ).
+    io_client->request->set_header_field( name = lc_accept value = lc_appj ).
+    io_client->request->set_header_field( name = 'content-type' value = lc_appj ).
+    io_client->request->set_header_field( name = 'OData-Version' value = '4.0' ).
+    io_client->propertytype_logon_popup = if_http_client=>co_disabled.
+    io_client->request->set_header_field( name = 'sap-client'   value = lv_mandt ).
+    io_client->request->set_header_field( name = 'sap-language' value = lv_lang ).
+    io_client->request->set_header_field( name = lc_uri value = 'api_purchaserequisition_2/srvd_a2x/sap/purchaserequisition/0001' ).
+    " io_client->request->set_header_field( name = lc_uri value = |$batch?sap-client={ sy-mandt }&sap-language={ lv_lang }| ).
+    io_client->send(  ).
+    io_client->receive(  ).
+
+*      "Read token
+    lv_csrf = io_client->response->get_header_field( lc_token ).
+    lv_etag = io_client->response->get_header_field( lc_etag ).
+    DATA(lv_body1) = io_client->response->get_cdata( ).
+    io_client->response->get_cookies(
+  CHANGING
+    cookies         =   lt_cookies               " Cookies
+).
+
+    " Create http client using RFC destination for patch calls
+    cl_http_client=>create_by_destination(
+  EXPORTING
+    destination              = iv_rfc_dest
+  IMPORTING
+    client                   = lo_http
+  EXCEPTIONS
+    argument_not_found       = 1
+    destination_not_found    = 2
+    destination_no_authority = 3
+    plugin_not_active        = 4
+    internal_error           = 5
+    OTHERS                   = 6
+)
+.
+    "Prepare request for Get call
+**      lo_http->request->set_method( if_http_request=>co_request_method_get ).
+**    lo_http->request->set_header_field( name = lc_token value = lc_fetch ).
+**    lo_http->request->set_header_field( name = 'sap-client'   value = lv_mandt ).
+**    lo_http->send( ).
+**    lo_http->receive( ).
+**    lv_csrf = lo_http->response->get_header_field( lc_token ).
+
+    lo_http->request->set_method( 'POST' ).
+    lo_http->request->set_header_field( name = lc_token value = lv_csrf ).
+    lo_http->request->set_header_field( name = 'sap-language' value = lv_lang ).
+    lo_http->request->set_header_field( name = 'sap-client'   value = lv_mandt ).
+    " lo_http->request->set_header_field( name = 'content-type' value = lc_appj ).
+    lo_http->request->set_header_field( name = 'content-type' value = 'multipart/mixed; boundary=batch' ).
+    " lo_http->request->set_header_field( name = lc_accept       value = lc_appj ).
+    lo_http->request->set_header_field( name = 'OData-Version' value = '4.0' ).
+    lo_http->propertytype_logon_popup = if_http_client=>co_disabled.
+*    lo_http->request->set_header_field( name = 'if-match' value = '*' ).
+    "Begin of code for Account Assignment Update
+    "IF iv_aa_cat NE lc_a.
+    " perform get
+
+    " perform patch for accountassignmentcategory
+*        lo_http->request->set_header_field(  name = lc_token value = lv_csrf ).
+    LOOP AT lt_cookies INTO DATA(ls_cookie).
+      lo_http->request->set_cookie(
+        name            =   ls_cookie-name               " Name of cookie
+        path            =   ls_cookie-path              " Path of Cookie
+        value           =    ls_cookie-value              " Cookie value
+        domain          =  ls_cookie-xdomain               " Domain Name of Cookie
+*    expires         = ``               " Cookie expiry date
+*    secure          = 0                " 0: unsaved; 1:saved
+*    cookie_encoding = 0                " 0: URL encoded, 1: unencoded
+      ).
+    ENDLOOP.
+*    lo_http->request->set_header_field( name = lc_uri value = |PurchaseReqnItem(PurchaseRequisition='{ iv_pr }',PurchaseRequisitionItem='{ iv_pr_item }')?sap-client={ sy-mandt }&sap-language={ lv_lang }| ).
+*    DATA(lv_payload) = |\{ "AccountAssignmentCategory" : "{ iv_aa_cat }" \}|.
+    lo_http->request->set_header_field( name = lc_uri value = 'api_purchaserequisition_2/srvd_a2x/sap/purchaserequisition/0001/$batch' ).
+
+    DATA(lv_distribution) = ' '.
+    IF lines( iv_asset ) > 1.
+      lv_distribution = 1.
+    ENDIF.
+    " 1. Start of Batch and the initial GET request
+    DATA(lv_payload) = |--batch| && lv_cr_lf &&
+
+                 |Content-Type: application/http| && lv_cr_lf &&
+                 |Content-Transfer-Encoding: binary| && lv_cr_lf &&
+                 lv_cr_lf &&
+
+                 |GET PurchaseReqnItem(PurchaseRequisition='{ iv_pr }',PurchaseRequisitionItem='{ iv_pr_item }') HTTP/1.1| && lv_cr_lf &&
+                 lv_cr_lf &&
+                 lv_cr_lf &&
+
+                 |--batch| && lv_cr_lf &&
+                 |Content-Type: multipart/mixed; boundary=changeset| && lv_cr_lf &&
+                 lv_cr_lf &&
+
+
+                 |--changeset| && lv_cr_lf &&
+                 |Content-Type: application/http| && lv_cr_lf &&
+                 |Content-Transfer-Encoding: binary| && lv_cr_lf &&
+                 |Content-ID: 1| && lv_cr_lf &&
+                 lv_cr_lf &&
+
+                 |PATCH PurchaseReqnItem(PurchaseRequisition='{ iv_pr }',PurchaseRequisitionItem='{ iv_pr_item }') HTTP/1.1| && lv_cr_lf &&
+                 |Content-Type: application/json| && lv_cr_lf &&
+                 |If-Match: *| && lv_cr_lf &&
+                 lv_cr_lf &&
+
+                 |\{ "AccountAssignmentCategory" : "A", "MultipleAcctAssgmtDistribution" : "{ lv_distribution }" \}| && lv_cr_lf &&
+                 lv_cr_lf.
+
+    " 4. LOOP for Account Assignments (Dynamic Part)
+    " We start from 1 up to your variable 'lv_count'
+    DATA(lv_count) = iv_assignments .
+    DATA(lv_count_create) = lines( iv_asset ) - iv_assignments.
+    DO lv_count TIMES.
+      DATA(lv_index) = sy-index.
+      " Format index to 2 digits (e.g., 01, 02) for the OData key
+      " DATA(lv_index_str) = |{ lv_index WIDTH = 2 ALIGN = RIGHT PAD = '0' }|.
+
+      " Each assignment needs a unique Content-ID (starting after the first PATCH, so index + 1)
+      DATA(lv_content_id) = lv_index + 1.
+      " data(lv_a_num) = |{ lv_index ALPHA = IN }|.
+      lv_payload = lv_payload &&
+
+                   lv_cr_lf &&
+                   |--changeset| && lv_cr_lf &&
+                   |Content-Type: application/http| && lv_cr_lf &&
+                   |Content-Transfer-Encoding: binary| && lv_cr_lf &&
+                   |Content-ID: { lv_content_id }| && lv_cr_lf &&
+                   lv_cr_lf &&
+
+                   |PATCH PurchaseReqnAcctAssgmt(PurchaseRequisition='{ iv_pr }',PurchaseRequisitionItem='{ iv_pr_item }',PurchaseReqnAcctAssgmtNumber='{ lv_index }') HTTP/1.1| && lv_cr_lf &&
+                   |Content-Type: application/json| && lv_cr_lf &&
+                   |If-Match: *| && lv_cr_lf &&
+                   lv_cr_lf &&
+
+                   |\{ | &&
+                   |"MasterFixedAsset" : "{ iv_asset[ lv_index ]-asset }", | &&
+                   |"CostCenter" : "{ iv_asset[ lv_index ]-cc }", | &&
+                   |"BaseUnitISOCode" : "{ iv_isocode }", | &&
+                   |"Quantity" : "1.000" | &&
+                   |\}| && lv_cr_lf &&
+                   lv_cr_lf.
+    ENDDO.
+    DATA(lv_assign_num) = iv_assignments.
+    DO lv_count_create TIMES.
+      lv_assign_num = lv_assign_num + 1.
+      lv_content_id = lv_content_id + 1.
+      " data(lv_a_num1) = |{ lv_assign_num ALPHA = IN }|.
+      lv_payload = lv_payload &&
+
+                   lv_cr_lf &&
+                   |--changeset| && lv_cr_lf &&
+                   |Content-Type: application/http| && lv_cr_lf &&
+                   |Content-Transfer-Encoding: binary| && lv_cr_lf &&
+                   |Content-ID: { lv_content_id }| && lv_cr_lf &&
+                   lv_cr_lf &&
+
+                   |POST PurchaseReqnAcctAssgmt HTTP/1.1| && lv_cr_lf &&
+                   |Content-Type: application/json| && lv_cr_lf &&
+                   |If-Match: *| && lv_cr_lf &&
+                   lv_cr_lf &&
+
+                   |\{ | &&
+                   |"PurchaseRequisition" : "{ iv_pr }", | &&
+                   |"PurchaseRequisitionItem" : "{ iv_pr_item }", | &&
+                   |"PurchaseReqnAcctAssgmtNumber" : "{ lv_assign_num }", | &&
+                   |"MasterFixedAsset" : "{ iv_asset[ lv_assign_num ]-asset }", | &&
+                   |"CostCenter" : "{ iv_asset[ lv_assign_num ]-cc }", | &&
+                   |"BaseUnitISOCode" : "{ iv_isocode }", | &&
+                   |"Quantity" : "1.000" | &&
+                   |\}| && lv_cr_lf &&
+                   lv_cr_lf.
+
+    ENDDO.
+
+    " 5. Close Changeset and Close Batch
+    lv_payload = lv_payload &&
+
+                 |--changeset--| && lv_cr_lf &&
+                 lv_cr_lf &&
+                 |--batch--|.
+
+
+    "DATA(lv_payload) = '{ "AccountAssignmentCategory": "' && iv_aa_cat && '", "MasterFixedAsset" : "' && iv_asset && '" }'.
+    lo_http->request->set_cdata( data = lv_payload ).
+    lo_http->send( ).
+    lo_http->receive( ).
+    lo_http->response->get_status(
+   IMPORTING code = DATA(lv_code)
+   reason = DATA(lv_reason)  ).
+    DATA: lv_code1 TYPE string.
+    lv_code1 = CONV #( lv_code ).
+    CONCATENATE lv_code1 lv_reason INTO ev_res SEPARATED BY space.
+    DATA(lv_body) = lo_http->response->get_cdata(  ).
+    " ENDIF.
+    "End of code for account assignment update
+
+
+
+**    IF lv_code IS INITIAL OR (  lv_code  >= 200 AND lv_code < 300 ).
+**      "Begin of code for Asset Update
+**      io_client->request->set_header_field( name = lc_uri value = |PurchaseReqnAcctAssgmt(PurchaseRequisition='{ iv_pr }',PurchaseRequisitionItem='{ iv_pr_item }',PurchaseReqnAcctAssgmtNumber='{ iv_aa_number }')?sap-client={ sy-mandt }&sap-language={
+**   lv_lang }| ).
+**
+**      io_client->send(  ).
+**      io_client->receive(  ).
+**
+**      "Read token
+***    CLEAR: lv_csrf,lv_etag,lv_body1,lt_cookies.
+**      lv_csrf = io_client->response->get_header_field( lc_token ).
+**      lv_etag = io_client->response->get_header_field( lc_etag ).
+**      DATA(lv_body1) = io_client->response->get_cdata( ).
+**      "Read cookie
+**      io_client->response->get_cookies(
+***     EXPORTING
+***       cookie_encoding = 0                " 0: URL unencoded, 1: not unencoded
+**        CHANGING
+**          cookies         =   lt_cookies               " Cookies
+**      ).
+**      " Prepare for patch
+**
+**      lo_http->request->set_header_field(  name = lc_token value = lv_csrf ).
+**      LOOP AT lt_cookies INTO DATA(ls_cookie).
+**        lo_http->request->set_cookie(
+**          name            =   ls_cookie-name               " Name of cookie
+**          path            =   ls_cookie-path              " Path of Cookie
+**          value           =    ls_cookie-value              " Cookie value
+**          domain          =  ls_cookie-xdomain               " Domain Name of Cookie
+***    expires         = ``               " Cookie expiry date
+***    secure          = 0                " 0: unsaved; 1:saved
+***    cookie_encoding = 0                " 0: URL encoded, 1: unencoded
+**        ).
+**      ENDLOOP.
+**
+**      lo_http->request->set_header_field( name = lc_uri value = |PurchaseReqnAcctAssgmt(PurchaseRequisition='{ iv_pr }',PurchaseRequisitionItem='{ iv_pr_item }',PurchaseReqnAcctAssgmtNumber='{ iv_aa_number }')?sap-client={ sy-mandt }&sap-language={
+**      lv_lang }| ).
+**      lv_payload = |\{ "MasterFixedAsset" : "{ iv_asset[ 1 ]-asset }" \}|.
+**      "DATA(lv_payload) = '{ "AccountAssignmentCategory": "' && iv_aa_cat && '", "MasterFixedAsset" : "' && iv_asset && '" }'.
+**      lo_http->request->set_cdata( data = lv_payload ).
+**
+**      lo_http->send(
+***      EXPORTING
+***        timeout                    = co_timeout_default
+***      EXCEPTIONS
+***        http_communication_failure = 1
+***        http_invalid_state         = 2
+***        http_processing_failed     = 3
+***        http_invalid_timeout       = 4
+***        others                     = 5
+**      ).
+**      IF sy-subrc <> 0.
+***     MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+***       WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+**      ENDIF.
+**      lo_http->receive(
+***      EXCEPTIONS
+***        http_communication_failure = 1
+***        http_invalid_state         = 2
+***        http_processing_failed     = 3
+***        others                     = 4
+**      ).
+**      IF sy-subrc <> 0.
+***     MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+***       WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+**      ENDIF.
+**
+**      lo_http->response->get_status(
+**     IMPORTING code = lv_code
+**     reason = lv_reason  ).
+***    DATA: lv_code1 TYPE string.
+**      lv_code1 = CONV #( lv_code ).
+**      CONCATENATE lv_code1 lv_reason INTO ev_res SEPARATED BY space.
+**      lv_body = lo_http->response->get_cdata(  ).
+**    ENDIF.
+    lo_http->close(  ).
+    ENDIF.
+
+  ENDMETHOD.
+
+
+  METHOD delete_from_final_table.
+
+
+
+    DELETE FROM ztactivos_fijos
+    WHERE banfn = @iv_pr
+    AND bnfpo = @iv_item.
+    .
+
+  ENDMETHOD.
+
+
+  METHOD reprocess_log_table.
+    DATA: lt_purchase_req TYPE TABLE OF ty_purchase_req.
+    TYPES:
+      BEGIN OF ty_req,
+        purchaserequisition          TYPE eban-banfn,
+        purchaserequisitionitem      TYPE eban-bnfpo,
+        purchaserequisitiontype      TYPE eban-bsart,
+        supplier                     TYPE eban-lifnr,
+        material                     TYPE eban-matnr,
+        purchasinggroup              TYPE eban-ekgrp,
+        plant                        TYPE eban-werks,
+        purreqnitemcurrency          TYPE eban-waers,
+        accountassignmentcategory     TYPE eban-knttp,
+        costcenter                   TYPE ebkn-kostl,
+        masterfixedasset             TYPE ebkn-anln1,
+        quantity                     TYPE ebkn-menge,
+        purreqnnetamount             TYPE eban-preis,
+        wbselementinternalid         TYPE ebkn-ps_psp_pnr,
+        purchasereqnacctassgmtnumber TYPE ebkn-zebkn,
+        comentario                   TYPE ztactivos_fijos-comentario,
+      END OF ty_req.
+    SELECT * FROM ztactivos_fijos WHERE banfn IN @iv_pr AND
+                                        bnfpo IN @iv_item
+                                   INTO TABLE @DATA(lt_errlog).
+    LOOP AT lt_errlog ASSIGNING FIELD-SYMBOL(<lfs_errlog>).
+
+      DATA(ls_req) = VALUE ty_req(
+        purchaserequisition          = <lfs_errlog>-banfn
+        purchaserequisitionitem      = <lfs_errlog>-bnfpo
+        purchaserequisitiontype      = <lfs_errlog>-bsart
+        supplier                     = <lfs_errlog>-lifnr
+        material                     = <lfs_errlog>-matnr
+        purchasinggroup              = <lfs_errlog>-ekgrp
+        plant                        = <lfs_errlog>-werks
+        purreqnitemcurrency          = <lfs_errlog>-waers
+        accountassignmentcategory    = <lfs_errlog>-knttp
+        costcenter                   = <lfs_errlog>-kostl
+        quantity                     = <lfs_errlog>-menge
+        purreqnnetamount             = <lfs_errlog>-preis
+        wbselementinternalid         = <lfs_errlog>-ps_psp_pnr
+        purchasereqnacctassgmtnumber = <lfs_errlog>-zebkn
+        masterfixedasset             = <lfs_errlog>-anln1
+        comentario                   = <lfs_errlog>-comentario
+      ).
+      APPEND ls_req TO lt_purchase_req.
+    ENDLOOP.
+    rt_purchase_req = lt_purchase_req.
+  ENDMETHOD.
+ENDCLASS.
