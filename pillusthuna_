@@ -1,1 +1,175 @@
-..
+FUNCTION ZFM_ASSET_CR_AND_PR_UPD.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(IV_COMP_CODE) TYPE  BAPI1022_1-COMP_CODE
+*"     VALUE(GENERALDATA) TYPE  BAPI1022_FEGLG001 OPTIONAL
+*"     VALUE(GENERALDATAX) TYPE  BAPI1022_FEGLG001X OPTIONAL
+*"     VALUE(TIMEDEPENDENTDATA) TYPE  BAPI1022_FEGLG003 OPTIONAL
+*"     VALUE(TIMEDEPENDENTDATAX) TYPE  BAPI1022_FEGLG003X OPTIONAL
+*"     REFERENCE(IV_ASSETCLASS) TYPE  BF_ANLKL
+*"     REFERENCE(IV_QUANTITY) TYPE  I
+*"     REFERENCE(IV_DESCRIPTION) TYPE  BF_TXA50
+*"     REFERENCE(IV_COSTCENTER) TYPE  KOSTL OPTIONAL
+*"     REFERENCE(IV_DEP_KEY) TYPE  AFASL OPTIONAL
+*"     REFERENCE(IV_ULIFE_YRS) TYPE  ANLB-NDJAR OPTIONAL
+*"     REFERENCE(IV_PR) TYPE
+*"        I_PURCHASEREQUISITIONITEM-PURCHASEREQUISITION
+*"     REFERENCE(IV_PR_ITEM) TYPE
+*"        I_PURCHASEREQUISITIONITEM-PURCHASEREQUISITIONITEM
+*"     REFERENCE(IV_ISOCODE) TYPE
+*"        A_PURCHASEREQUISITIONITEM_2-BASEUNITISOCODE DEFAULT 'EA'
+*"     REFERENCE(IV_RFC_DEST) TYPE  RFCDEST
+*"     REFERENCE(IV_ASSIGN) TYPE  EBKN-ZEBKN DEFAULT 0
+*"  EXPORTING
+*"     VALUE(ET_RESULT) TYPE  ZTTASSET_CREATE_OUT
+*"     VALUE(ET_RETURN) TYPE  ZTT_BAPIRET2
+*"----------------------------------------------------------------------
+
+DATA: ls_generaldata type bapi1022_feglg001,
+      ls_generaldatax type bapi1022_feglg001x,
+      ls_timedep type bapi1022_feglg003,
+      ls_timedepx type bapi1022_feglg003x,
+      ls_assetcreated type bapi1022_reference,
+      ls_return type bapiret2.
+*DATA: lt_dep type TABLE of bapi1022_dep_areas,
+*      ls_dep type bapi1022_dep_areas.
+
+types: begin of ty_asset,
+        asset type anln1,
+        cc type kostl,
+  end of ty_asset.
+*
+*data: lo_obj type REF TO zcl_fiaf27_solpedaf,
+*      ls_asset type ty_asset.
+*
+*data: lt_asset type STANDARD TABLE OF ty_asset.
+data: lo_obj type REF TO zcl_fiaf27_solpedaf.
+data: lt_asset type zcl_fiaf27_solpedaf=>ty_t_asset,
+      ls_asset type zcl_fiaf27_solpedaf=>ty_asset.
+
+"===============================================
+"  Validation -  Quantity must be > 0
+"===============================================
+
+   if iv_quantity <= 0.
+     APPEND value #( type = 'E' message = 'Invalid quantity' ) to et_return.
+     return.
+   ENDIF.
+
+
+"====================================================
+   " Asset Creation Loop
+"====================================================
+
+   do iv_quantity times.
+     clear: ls_generaldata,
+            ls_generaldatax,
+            ls_timedep,
+            ls_timedepx,
+            ls_assetcreated,
+            ls_return.
+*     clear: lt_dep, ls_dep.
+
+"============================
+" General Data
+"============================
+  ls_generaldata-descript = iv_description.
+  ls_generaldata-assetclass = iv_assetclass.
+
+  ls_generaldatax-descript = 'X'.
+  ls_generaldatax-assetclass = 'X'.
+
+"===============================
+" Time Dependent Data
+"===============================
+ if iv_costcenter is not initial.
+   ls_timedep-costcenter = iv_costcenter.
+   ls_timedepx-costcenter = 'X'.
+ endif.
+
+"=============================
+" Depreciation Data
+"=============================
+* if iv_dep_key is not INITIAL.
+*   ls_dep-area = '01'.
+*   ls_dep-dep_key = iv_dep_key.
+*   ls_dep-ulife_yrs = iv_ulife_yrs.
+*  append ls_dep to lt_dep.
+*endif.
+
+"======================================
+" BAPI Call
+"======================================
+
+call FUNCTION 'BAPI_FIXEDASSET_CREATE'
+  EXPORTING
+    companycode = iv_comp_code
+    generaldata = ls_generaldata
+    generaldatax = ls_generaldatax
+   timedependentdata = ls_timedep
+   timedependentdatax = ls_timedepx
+  IMPORTING
+    assetcreated = ls_assetcreated
+    return = ls_return.
+"tables
+"   depreciationareas = lt_dep.
+
+"=============================================
+" Result Handling
+"=============================================
+data(lv_status) = cond char1(
+  when ls_return-type CA 'EAX' THEN 'E'
+  ELSE 'S'
+  ).
+
+data(ls_out) = value ZSASSET_CREATE_OUT(
+  asset = ls_assetcreated-asset
+  subnumber = ls_assetcreated-subnumber
+  status = lv_status
+  message = ls_return-message
+  ).
+
+append ls_out to et_result.
+append ls_return to et_return.
+
+"=============================================
+" Collect only SUCCESS assets FOR API Call
+"=============================================
+if lv_status = 'S'.
+  append value ty_asset(
+    asset = ls_assetcreated-asset
+    cc = iv_costcenter
+    ) to lt_asset.
+  ENDIF.
+ enddo.
+
+"==============================
+" Commit
+"==============================
+call FUNCTION 'BAPI_TRANSACTION_COMMIT'
+  EXPORTING
+    wait = 'X'.
+
+"======================================
+" API Call (PR Update)
+"======================================
+if lt_asset is not INITIAL.
+  read table lt_asset into ls_asset index 1.
+  if sy-subrc = 0.
+  create object lo_obj.
+  call method lo_obj->update_purchase_requisition
+    EXPORTING
+      iv_pr = iv_pr
+      iv_pr_item = iv_pr_item
+      iv_asset = lt_asset
+      iv_aa_cat = 'A'
+      iv_aa_number = IV_ASSIGN
+      iv_isocode = iv_isocode
+      iv_rfc_dest = iv_rfc_dest
+      iv_assignments = iv_assign.
+  ENDIF.
+ENDIF.
+
+
+ENDFUNCTION.
