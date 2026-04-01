@@ -1,0 +1,54 @@
+METHOD save_modified.
+ 
+  DATA: lt_return TYPE ztt_bapiret2,
+
+        lt_result TYPE zttasset_create_out.
+ 
+  DATA: lt_return_all TYPE ztt_bapiret2,
+
+        lt_result_all TYPE zttasset_create_out.
+ 
+  IF gt_pr_data IS NOT INITIAL.
+ 
+    LOOP AT gt_pr_data INTO DATA(ls_data).
+ 
+      CALL FUNCTION 'ZFM_ASSET_CR_AND_PR_UPD'
+
+        EXPORTING
+
+          iv_pr          = ls_data-purchaserequisition
+
+          iv_pr_item     = ls_data-purchaserequisitionitem
+
+          iv_quantity    = ls_data-quantity
+
+          iv_description = ls_data-comentario
+
+          iv_costcenter  = ls_data-costcenter
+
+          iv_isocode     = ls_data-baseunitisocode
+
+          iv_assign      = ls_data-purchasereqnacctassgmtnumber
+
+        IMPORTING
+
+          et_return      = DATA(lt_return_fm)
+
+          et_result      = DATA(lt_result_fm).
+ 
+      APPEND LINES OF lt_return_fm TO lt_return_all.
+
+      APPEND LINES OF lt_result_fm TO lt_result_all.
+ 
+    ENDLOOP.
+ 
+  ENDIF.
+ 
+  lt_return = lt_return_all.
+
+  lt_result = lt_result_all.
+ 
+  CLEAR gt_pr_data.
+ 
+ENDMETHOD.
+ 
