@@ -1,0 +1,84 @@
+DATA: lv_asset TYPE anln1,
+
+      lv_sub   TYPE anln2,
+
+      lt_ret   TYPE bapiret2_t,
+
+      ls_ret   TYPE bapiret2.
+ 
+DATA: lt_asset TYPE zcl_fiaf27_solpedaf=>ty_t_asset.
+ 
+LOOP AT it_cc_split INTO DATA(ls_cc).
+ 
+  DO ls_cc-qty TIMES.
+ 
+    CLEAR: lv_asset, lv_sub, lt_ret, ls_ret.
+ 
+    ls_purchase_req-costcenter = ls_cc-costcenter.
+ 
+    lo_obj->create_single_asset(
+
+      EXPORTING
+
+        is_purchase_req = ls_purchase_req
+
+        iv_commit       = space
+
+      IMPORTING
+
+        ev_asset        = lv_asset
+
+        ev_sub_num      = lv_sub
+
+        et_return       = lt_ret ).
+ 
+* Error check
+
+    DATA(lv_status) = 'S'.
+ 
+    READ TABLE lt_ret INTO ls_ret WITH KEY type = 'E'.
+
+    IF sy-subrc <> 0.
+
+      READ TABLE lt_ret INTO ls_ret WITH KEY type = 'A'.
+
+    ENDIF.
+
+    IF sy-subrc <> 0.
+
+      READ TABLE lt_ret INTO ls_ret WITH KEY type = 'X'.
+
+    ENDIF.
+ 
+    IF sy-subrc = 0.
+
+      lv_status = 'E'.
+
+    ENDIF.
+ 
+    APPEND VALUE zsasset_create_out(
+
+      asset     = lv_asset
+
+      subnumber = lv_sub
+
+      status    = lv_status
+
+      message   = COND #( WHEN ls_ret IS NOT INITIAL THEN ls_ret-message ELSE 'Created successfully' )
+
+    ) TO et_result.
+ 
+    APPEND LINES OF lt_ret TO et_return.
+ 
+* Success collection
+
+    IF lv_status = 'S' AND lv_asset IS NOT INITIAL.
+
+      APPEND VALUE #( asset = lv_asset cc = ls_cc-costcenter ) TO lt_asset.
+
+    ENDIF.
+ 
+  ENDDO.
+ 
+ENDLOOP.
+ 
