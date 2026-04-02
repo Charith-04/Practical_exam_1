@@ -1,0 +1,71 @@
+ methods CREATE_SINGLE_ASSET
+    importing
+      !IS_PURCHASE_REQ type TY_PURCHASE_REQ
+      !IV_COMMIT type CHAR1 default 'X'
+    exporting
+      !EV_ASSET type ANLN1
+      !EV_SUB_NUM type ANLN2
+      !ET_RETURN type BAPIRET2_T .
+
+    METHOD create_single_asset.
+
+    DATA: ls_gen           TYPE bapi1022_feglg001,
+          ls_genx          TYPE bapi1022_feglg001x,
+          ls_time          TYPE bapi1022_feglg003,
+          ls_timex         TYPE bapi1022_feglg003x,
+          ls_comp          TYPE bapi1022_1-comp_code,
+          ls_return_bapi   TYPE bapiret2,
+          ls_asset_created TYPE bapi1022_reference.
+
+    " Variables locales
+    DATA: ls_sociedad TYPE ty_sociedad,
+          ls_bklas    TYPE ty_act_fijo,
+          ls_clase_af TYPE ty_clase_activos,
+          ls_material TYPE ty_materials.
+
+    CLEAR: ev_asset, ev_sub_num, et_return.
+
+    " --- MAPEO ---
+    READ TABLE mt_sociedad INTO ls_sociedad WITH KEY bwkey = is_purchase_req-plant.
+    ls_comp = ls_sociedad-bukrs.
+
+    READ TABLE mt_bklas INTO ls_bklas WITH KEY material = is_purchase_req-material plant = is_purchase_req-plant.
+    READ TABLE mt_clase_activos INTO ls_clase_af WITH KEY bklas = ls_bklas-valuationclass.
+    ls_gen-assetclass = ls_clase_af-anlkl.
+    ls_genx-assetclass = abap_true.
+
+    READ TABLE mt_material INTO ls_material WITH KEY matnr = is_purchase_req-material.
+    IF sy-subrc = 0.
+      ls_gen-descript = ls_material-desc.
+    ELSE.
+      ls_gen-descript = is_purchase_req-material.
+    ENDIF.
+    ls_genx-descript = abap_true.
+
+    ls_time-costcenter = is_purchase_req-costcenter.
+    ls_timex-costcenter = abap_true.
+
+    " --- LLAMADA BAPI ---
+    CALL FUNCTION 'BAPI_FIXEDASSET_CREATE' DESTINATION 'NONE'
+      EXPORTING
+        companycode        = ls_comp
+        generaldata        = ls_gen
+        generaldatax       = ls_genx
+        timedependentdata  = ls_time
+        timedependentdatax = ls_timex
+      IMPORTING
+        assetcreated       = ls_asset_created
+        return             = ls_return_bapi.
+
+    " --- GESTION RETORNO ---
+    IF ls_return_bapi-type = 'E' OR ls_return_bapi-type = 'A'.
+      APPEND ls_return_bapi TO et_return.
+      CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
+    ELSE.
+      ev_asset   = ls_asset_created-asset.
+      ev_sub_num = ls_asset_created-subnumber.
+      IF iv_commit = 'X'.
+      CALL FUNCTION 'BAPI_TRANSACTION_COMMIT' EXPORTING wait = abap_true.
+      ENDIF.
+    ENDIF.
+  ENDMETHOD.
