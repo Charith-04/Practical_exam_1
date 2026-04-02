@@ -164,3 +164,29 @@ METHOD save_modified.
  
 ENDMETHOD.
  
+--C1782B729072E2538E4D369E00204FDC0
+Content-Type: application/http
+Content-Length: 2752
+content-transfer-encoding: binary
+
+HTTP/1.1 200 OK
+Content-Type: application/json;odata.metadata=minimal;charset=utf-8
+Content-Length: 2508
+odata-version: 4.0
+etag: W/"SADL-202603021501414051200C~20260302150141.4051200"
+cache-control: no-cache, no-store, must-revalidate
+
+{"@odata.context":"$metadata#PurchaseReqnItem/$entity","@odata.metadataEtag":"W/\"20260318212505\"","@odata.etag":"W/\"SADL-202603021501414051200C~20260302150141.4051200\"","PurchaseRequisition":"40000158","PurchaseRequisitionItem":"10","PurchasingDocument":"","PurchasingDocumentItem":"0","PurReqnReleaseStatus":"05","PurchasingDocumentSubtype":"","PurchasingDocumentItemCategory":"0","PurchaseRequisitionItemText":"Caja Fuerte","AccountAssignmentCategory":"Y","Material":"000000000000100004","MaterialGroup":"GA007","RequestedQuantity":10,"BaseUnit":"ST","BaseUnitISOCode":"PCE","PurchaseRequisitionPrice":10000.00,"PurReqnPriceQuantity":1,"MaterialGoodsReceiptDuration":0,"PurchasingOrganization":"","PurchasingGroup":"HON","Plant":"HN01","CompanyCode":"HN01","SourceOfSupplyIsAssigned":false,"SupplyingPlant":"","OrderedQuantity":0,"DeliveryDate":"2026-02-03","ProcessingStatus":"N","ExternalApprovalStatus":"","PurchasingInfoRecord":"","Supplier":"","IsDeleted":false,"FixedSupplier":"","RequisitionerName":"","CreatedByUser":"ZABAP02BTP","PurReqCreationDate":"2026-02-03","PurReqnItemCurrency":"USD","MaterialPlannedDeliveryDurn":0,"DelivDateCategory":"1","MultipleAcctAssgmtDistribution":"1","StorageLocation":"","PurReqnSSPRequestor":"","PurReqnSSPAuthor":"","PurchaseContract":"","PurReqnSourceOfSupplyType":"","PurchaseContractItem":"0","ConsumptionPosting":"V","PurReqnOrigin":"R","PurReqnSSPCatalog":"","PurReqnSSPCatalogItem":"","PurReqnSSPCrossCatalogItem":0,"PurReqnItemBlockingStatus":"","PurReqnItemBlockingReasonText":"","Language":"ES","IsClosed":false,"ReleaseIsNotCompleted":false,"ServicePerformer":"","ProductTypeCode":"1","PerformancePeriodStartDate":null,"PerformancePeriodEndDate":null,"PurchaseOrderPriceType":"","SupplierMaterialNumber":"","Batch":"","MaterialRevisionLevel":"","MinRemainingShelfLife":0,"ItemNetAmount":100000.00,"TaxCode":"","GoodsReceiptIsExpected":true,"InvoiceIsExpected":true,"GoodsReceiptIsNonValuated":true,"RequirementTracking":"","MRPController":"","PurchaseRequisitionIsFixed":false,"LastChangeDateTime":"2026-03-02T15:01:41.40512Z","Reservation":"0","ItemDeliveryAddressID":"","PurReqnReceivingCustomer":"","Subcontractor":"","ExpectedOverallLimitAmount":0.00,"OverallLimitAmount":0.00,"PurContractForOverallLimit":"","PurContractItemForOverallLimit":"0","PurReqnExternalReference":"","PurReqnItemExternalReference":"","PurReqnExternalSystemId":"","ProcurementHubSourceSystem":"","SSPAuthorExternalBPIdnNumber":"","SSPReqrUserId":"","SAP__Messages":[]}
+--C1782B729072E2538E4D369E00204FDC0
+Content-Type: application/http
+Content-Length: 1364
+content-transfer-encoding: binary
+
+HTTP/1.1 400 Bad Request
+Content-Type: application/json;odata.metadata=minimal;charset=utf-8
+Content-Length: 1203
+content-language: es
+odata-version: 4.0
+
+{"error":{"code":"CX_SXML_PARSE_ERROR","message":"Error al analizar un flujo XML","@SAP__common.ExceptionCategory":"Client_Error","details":[{"code":"/IWCOR/CX_OD_BAD_REQUEST/005056A509B11ED1B9BF94F386DD82E6","message":"No se ha entendido la solicitud de Data Services por un error de sintaxis","@SAP__common.Severity":"error","@SAP__common.numericSeverity":4},{"code":"/IWCOR/CX_OD_EP_PROPERTY_ERROR/005056A509B11ED1BF822D2D0917DA04","message":"La propiedad Quantity del decalaje 106 tiene un valor no válido: 1.000","@SAP__common.Severity":"error","@SAP__common.numericSeverity":4}],"innererror":{"ErrorDetails":{"@SAP__common.Application":{"ComponentId":"MM-PUR-REQ","ServiceRepository":"SRVD_A2X","ServiceId":"API_PURCHASEREQUISITION_2","ServiceVersion":"0001"},"@SAP__common.TransactionId":"D008269DEDF80250E0069CDE7A48E638","@SAP__common.Timestamp":"20260402071427.504889","@SAP__common.ErrorResolution":{"Analysis":"Use ADT feed reader \"SAP Gateway Error Log\" or run transaction /IWFND/ERROR_LOG on SAP Gateway hub system and search for entries with the timestamp above for more details","Note":"See SAP Note 1797736 for error analysis (https://service.sap.com/sap/support/notes/1797736)"}}}}}
+--C1782B729072E2538E4D369E00204FDC0--
