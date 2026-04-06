@@ -1,254 +1,4 @@
-FUNCTION zfm_asset_cr_and_pr_upd .
-*"----------------------------------------------------------------------
-*"*"Local Interface:
-*"  IMPORTING
-*"     VALUE(IV_PR) TYPE  I_PURCHASEREQUISITIONITEM-PURCHASEREQUISITION
-*"     VALUE(IV_PR_ITEM) TYPE
-*"        I_PURCHASEREQUISITIONITEM-PURCHASEREQUISITIONITEM
-*"     VALUE(IV_QUANTITY) TYPE  EBKN-MENGE
-*"     VALUE(IV_DESCRIPTION) TYPE  ZTACTIVOS_FIJOS-COMENTARIO
-*"     VALUE(IV_COSTCENTER) TYPE  KOSTL OPTIONAL
-*"     VALUE(IV_DEP_KEY) TYPE  AFASL OPTIONAL
-*"     VALUE(IV_ULIFE_YRS) TYPE  ANLB-NDJAR OPTIONAL
-*"     VALUE(IV_ISOCODE) TYPE
-*"        A_PURCHASEREQUISITIONITEM_2-BASEUNITISOCODE OPTIONAL
-*"     VALUE(IV_RFC_DEST) TYPE  RFCDEST OPTIONAL
-*"     VALUE(IV_ASSIGN) TYPE  EBKN-ZEBKN OPTIONAL
-*"  EXPORTING
-*"     VALUE(ET_RESULT) TYPE  ZTTASSET_CREATE_OUT
-*"     VALUE(ET_RETURN) TYPE  ZTT_BAPIRET2
-*"----------------------------------------------------------------------
-  DATA: ls_generaldata  TYPE bapi1022_feglg001,
-
-        ls_generaldatx  TYPE bapi1022_feglg001x,
-
-        ls_timedep      TYPE bapi1022_feglg003,
-
-        ls_timedepx     TYPE bapi1022_feglg003x,
-
-        ls_assetcreated TYPE bapi1022_reference,
-
-        ls_return       TYPE bapiret2.
-  DATA: lo_obj TYPE REF TO zcl_fiaf27_solpedaf.
-  CREATE OBJECT lo_obj.
-
-  DATA: lt_dep TYPE TABLE OF bapi1022_dep_areas,
-
-        ls_dep TYPE bapi1022_dep_areas.
-
-  TYPES: BEGIN OF ty_asset,
-
-           asset TYPE anln1,
-
-           cc    TYPE kostl,
-
-         END OF ty_asset.
-
-
-
-*---------------- NEW DATA ----------------*
-  DATA: lt_asset TYPE zcl_fiaf27_solpedaf=>ty_t_asset,
-        ls_asset TYPE zcl_fiaf27_solpedaf=>ty_asset.
-
-
-  TYPES:
-  ty_t_purchase_req TYPE STANDARD TABLE OF zcl_fiaf27_solpedaf=>ty_purchase_req WITH EMPTY KEY .
-
-
-  DATA: lt_purchase_req TYPE ty_t_purchase_req,
-
-        ls_purchase_req TYPE zcl_fiaf27_solpedaf=>ty_purchase_req,
-
-        ls_eban         TYPE eban.
-
-  DATA: lv_asset TYPE anln1,
-
-        lv_sub   TYPE anln2,
-
-        lt_ret   TYPE bapiret2_t,
-
-        ls_ret   TYPE bapiret2.
-
-
-*------------------------------------------*
-
-*==============================
-
-* Validation
-*==============================
-
-  IF iv_quantity <= 0.
-
-    APPEND VALUE #( type = 'E' message = 'Invalid quantity' ) TO et_return.
-
-    RETURN.
-
-  ENDIF.
-
-*==============================
-
-* Fetch Plant + Material
-
-*==============================
-
-  SELECT SINGLE werks, matnr
-
-    INTO (@ls_eban-werks, @ls_eban-matnr)
-
-    FROM eban
-
-    WHERE banfn = @iv_pr
-
-      AND bnfpo = @iv_pr_item.
-
-  IF sy-subrc <> 0 OR ls_eban-werks IS INITIAL OR ls_eban-matnr IS INITIAL.
-
-    APPEND VALUE #( type = 'E' message = 'PR data not found' ) TO et_return.
-
-    RETURN.
-
-  ENDIF.
-
-*==============================
-
-* Prepare Purchase Req
-
-*==============================
-
-  ls_purchase_req-plant      = ls_eban-werks.
-
-  ls_purchase_req-material   = ls_eban-matnr.
-
-  ls_purchase_req-costcenter = iv_costcenter.
-
-  APPEND ls_purchase_req TO lt_purchase_req.
-
-*==============================
-
-* Fill Internal Tables (MANDATORY)
-
-*==============================
-
-  lo_obj->select_data_for_assets(
-
-      EXPORTING
-
-        it_purchase_req = lt_purchase_req
-
-    ).
-
-*==============================
-
-* Asset Creation Loop
-
-*==============================
-
-  DO iv_quantity TIMES.
-
-    CLEAR: lv_asset, lv_sub, lt_ret, ls_ret.
-
-    READ TABLE lt_purchase_req INTO ls_purchase_req INDEX 1.
-
-*---------------- REPLACED BAPI ----------------*
-
-    CALL METHOD lo_obj->create_single_asset
-      EXPORTING
-        is_purchase_req = ls_purchase_req
-        iv_commit       = space
-      IMPORTING
-        ev_asset        = lv_asset
-        ev_sub_num      = lv_sub
-        et_return       = lt_ret.
-
-*---------------------------------------------*
-
-*---------------- RESULT HANDLING ----------------*
-
-    DATA(lv_status) = 'S'.
-
-    READ TABLE lt_ret INTO ls_ret WITH KEY type = 'E'.
-
-    IF sy-subrc = 0.
-
-      lv_status = 'E'.
-
-    ENDIF.
-
-    APPEND VALUE zsasset_create_out(
-
-      asset     = lv_asset
-
-      subnumber = lv_sub
-
-      status    = lv_status
-
-      message   = COND #( WHEN ls_ret IS NOT INITIAL THEN ls_ret-message ELSE 'Created successfully' )
-
-    ) TO et_result.
-
-    APPEND LINES OF lt_ret TO et_return.
-
-*------------------------------------------------*
-
-*---------------- SUCCESS COLLECTION ----------------*
-
-    IF lv_status = 'S' AND lv_asset IS NOT INITIAL.
-
-      APPEND VALUE ty_asset(
-
-        asset = lv_asset
-
-        cc    = iv_costcenter
-
-      ) TO lt_asset.
-
-    ENDIF.
-
-*---------------------------------------------------*
-
-  ENDDO.
-
-*==============================
-
-* Commit
-
-*==============================
-
-*  IF lt_asset IS NOT INITIAL.
-*
-*    CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
-*      EXPORTING
-*        wait = 'X'.
-*
-*  ELSE.
-*
-*    APPEND VALUE #( type = 'E' message = 'No assets created successfully' ) TO et_return.
-*
-*    RETURN.
-*
-*  ENDIF.
-
-*==============================
-
-* API Call (PR Update)
-
-*==============================
-
-  CALL METHOD lo_obj->update_purchase_requisition
-    EXPORTING
-      iv_pr          = iv_pr
-      iv_pr_item     = iv_pr_item
-      iv_aa_cat      = 'A'
-      iv_aa_number   = iv_assign
-      iv_asset       = lt_asset
-      iv_isocode     = iv_isocode
-      iv_rfc_dest    = iv_rfc_dest
-      iv_assignments = iv_assign.
-
-ENDFUNCTION.
-
-1/04/2026
-FUNCTION zfm_asset_cr_and_pr_upd .
+FUNCTION zfm_asset_cr_and_pr_upd.
 *"----------------------------------------------------------------------
 *"*"Local Interface:
 *"  IMPORTING
@@ -268,25 +18,19 @@ FUNCTION zfm_asset_cr_and_pr_upd .
 *"     VALUE(ET_RESULT) TYPE  ZTTASSET_CREATE_OUT
 *"     VALUE(ET_RETURN) TYPE  ZTT_BAPIRET2
 *"  TABLES
-*"      LT_TABLE TYPE  ZTT_PURCHASE_REQ
+*"      IT_CC_SPLIT STRUCTURE  ZTY_CC_SPLIT
 *"----------------------------------------------------------------------
-  DATA: ls_generaldata  TYPE bapi1022_feglg001,
 
-        ls_generaldatx  TYPE bapi1022_feglg001x,
 
-        ls_timedep      TYPE bapi1022_feglg003,
-
-        ls_timedepx     TYPE bapi1022_feglg003x,
-
-        ls_assetcreated TYPE bapi1022_reference,
-
-        ls_return       TYPE bapiret2.
   DATA: lo_obj TYPE REF TO zcl_fiaf27_solpedaf.
+
   CREATE OBJECT lo_obj.
 
-  DATA: lt_dep TYPE TABLE OF bapi1022_dep_areas,
+*--------------------------------------
 
-        ls_dep TYPE bapi1022_dep_areas.
+* Local Types
+
+*--------------------------------------
 
   TYPES: BEGIN OF ty_asset,
 
@@ -296,18 +40,17 @@ FUNCTION zfm_asset_cr_and_pr_upd .
 
          END OF ty_asset.
 
+*--------------------------------------
 
+* Data Declarations
 
-*---------------- NEW DATA ----------------*
+*--------------------------------------
+
   DATA: lt_asset TYPE zcl_fiaf27_solpedaf=>ty_t_asset,
+
         ls_asset TYPE zcl_fiaf27_solpedaf=>ty_asset.
 
-
-  TYPES:
-  ty_t_purchase_req TYPE STANDARD TABLE OF zcl_fiaf27_solpedaf=>ty_purchase_req WITH EMPTY KEY .
-
-
-  DATA: lt_purchase_req TYPE ty_t_purchase_req,
+  DATA: lt_purchase_req TYPE zcl_fiaf27_solpedaf=>ty_t_purchase_req,
 
         ls_purchase_req TYPE zcl_fiaf27_solpedaf=>ty_purchase_req,
 
@@ -319,15 +62,15 @@ FUNCTION zfm_asset_cr_and_pr_upd .
 
         lt_ret   TYPE bapiret2_t,
 
-        ls_ret   TYPE bapiret2.
+        ls_ret   TYPE bapiret2,
 
+        lv_status TYPE char1.
 
-*------------------------------------------*
-
-*==============================
+*--------------------------------------
 
 * Validation
-*==============================
+
+*--------------------------------------
 
   IF iv_quantity <= 0.
 
@@ -337,11 +80,11 @@ FUNCTION zfm_asset_cr_and_pr_upd .
 
   ENDIF.
 
-*==============================
+*--------------------------------------
 
-* Fetch Plant + Material
+* Fetch PR Data
 
-*==============================
+*--------------------------------------
 
   SELECT SINGLE werks, matnr
 
@@ -353,7 +96,7 @@ FUNCTION zfm_asset_cr_and_pr_upd .
 
       AND bnfpo = @iv_pr_item.
 
-  IF sy-subrc <> 0 OR ls_eban-werks IS INITIAL OR ls_eban-matnr IS INITIAL.
+  IF sy-subrc <> 0.
 
     APPEND VALUE #( type = 'E' message = 'PR data not found' ) TO et_return.
 
@@ -361,267 +104,23 @@ FUNCTION zfm_asset_cr_and_pr_upd .
 
   ENDIF.
 
-*==============================
+*--------------------------------------
 
-* Prepare Purchase Req
+* Prepare Structure
 
-*==============================
+*--------------------------------------
 
-  ls_purchase_req-plant      = ls_eban-werks.
+  ls_purchase_req-plant    = ls_eban-werks.
 
-  ls_purchase_req-material   = ls_eban-matnr.
-
-  ls_purchase_req-costcenter = iv_costcenter.
+  ls_purchase_req-material = ls_eban-matnr.
 
   APPEND ls_purchase_req TO lt_purchase_req.
 
-*==============================
-
-* Fill Internal Tables (MANDATORY)
-
-*==============================
-
-  lo_obj->select_data_for_assets(
-
-      EXPORTING
-
-        it_purchase_req = lt_purchase_req
-
-    ).
-
-*==============================
-
-* Asset Creation Loop
-
-*==============================
-
-  DO iv_quantity TIMES.
-
-    CLEAR: lv_asset, lv_sub, lt_ret, ls_ret.
-
-    READ TABLE lt_purchase_req INTO ls_purchase_req INDEX 1.
-
-*---------------- REPLACED BAPI ----------------*
-
-    CALL METHOD lo_obj->create_single_asset
-      EXPORTING
-        is_purchase_req = ls_purchase_req
-        iv_commit       = space
-      IMPORTING
-        ev_asset        = lv_asset
-        ev_sub_num      = lv_sub
-        et_return       = lt_ret.
-
-*---------------------------------------------*
-
-*---------------- RESULT HANDLING ----------------*
-
-    DATA(lv_status) = 'S'.
-
-    READ TABLE lt_ret INTO ls_ret WITH KEY type = 'E'.
-
-    IF sy-subrc = 0.
-
-      lv_status = 'E'.
-
-    ENDIF.
-
-    APPEND VALUE zsasset_create_out(
-
-      asset     = lv_asset
-
-      subnumber = lv_sub
-
-      status    = lv_status
-
-      message   = COND #( WHEN ls_ret IS NOT INITIAL THEN ls_ret-message ELSE 'Created successfully' )
-
-    ) TO et_result.
-
-    APPEND LINES OF lt_ret TO et_return.
-
-*------------------------------------------------*
-
-*---------------- SUCCESS COLLECTION ----------------*
-
-    IF lv_status = 'S' AND lv_asset IS NOT INITIAL.
-
-      APPEND VALUE ty_asset(
-
-        asset = lv_asset
-
-        cc    = iv_costcenter
-
-      ) TO lt_asset.
-
-    ENDIF.
-
-*---------------------------------------------------*
-
-  ENDDO.
-
-*==============================
-
-* Commit
-
-*==============================
-
-*  IF lt_asset IS NOT INITIAL.
-*
-*    CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
-*      EXPORTING
-*        wait = 'X'.
-*
-*  ELSE.
-*
-*    APPEND VALUE #( type = 'E' message = 'No assets created successfully' ) TO et_return.
-*
-*    RETURN.
-*
-*  ENDIF.
-
-*==============================
-
-* API Call (PR Update)
-
-*==============================
-
-  CALL METHOD lo_obj->update_purchase_requisition
-    EXPORTING
-      iv_pr          = iv_pr
-      iv_pr_item     = iv_pr_item
-      iv_aa_cat      = 'A'
-      iv_aa_number   = iv_assign
-      iv_asset       = lt_asset
-      iv_isocode     = iv_isocode
-      iv_rfc_dest    = iv_rfc_dest
-      iv_assignments = iv_assign.
-
-ENDFUNCTION.
-
-
-new one --->>>>>
-FUNCTION zfm_asset_cr_and_pr_upd.
-
-*"----------------------------------------------------------------------
-
-*"  IMPORTING
-
-*"     VALUE(IV_PR) TYPE  I_PURCHASEREQUISITIONITEM-PURCHASEREQUISITION
-
-*"     VALUE(IV_PR_ITEM) TYPE I_PURCHASEREQUISITIONITEM-PURCHASEREQUISITIONITEM
-
-*"     VALUE(IV_QUANTITY) TYPE  EBKN-MENGE
-
-*"     VALUE(IV_DESCRIPTION) TYPE  ZTACTIVOS_FIJOS-COMENTARIO
-
-*"     VALUE(IV_COSTCENTER) TYPE  KOSTL OPTIONAL
-
-*"     VALUE(IV_DEP_KEY) TYPE  AFASL OPTIONAL
-
-*"     VALUE(IV_ULIFE_YRS) TYPE  ANLB-NDJAR OPTIONAL
-
-*"     VALUE(IV_ISOCODE) TYPE A_PURCHASEREQUISITIONITEM_2-BASEUNITISOCODE OPTIONAL
-
-*"     VALUE(IV_RFC_DEST) TYPE  RFCDEST OPTIONAL
-
-*"     VALUE(IV_ASSIGN) TYPE  EBKN-ZEBKN OPTIONAL
-
-*"  EXPORTING
-
-*"     VALUE(ET_RESULT) TYPE  ZTTASSET_CREATE_OUT
-
-*"     VALUE(ET_RETURN) TYPE  ZTT_BAPIRET2
-
-*"----------------------------------------------------------------------
- 
-  DATA: lo_obj TYPE REF TO zcl_fiaf27_solpedaf.
-
-  CREATE OBJECT lo_obj.
- 
-  TYPES: BEGIN OF ty_asset,
-
-           asset TYPE anln1,
-
-           cc    TYPE kostl,
-
-         END OF ty_asset.
- 
-  DATA: lt_asset TYPE zcl_fiaf27_solpedaf=>ty_t_asset,
-
-        ls_asset TYPE zcl_fiaf27_solpedaf=>ty_asset.
- 
-  DATA: lt_purchase_req TYPE STANDARD TABLE OF zcl_fiaf27_solpedaf=>ty_purchase_req,
-
-        ls_purchase_req TYPE zcl_fiaf27_solpedaf=>ty_purchase_req,
-
-        ls_eban         TYPE eban.
- 
-  DATA: lv_asset TYPE anln1,
-
-        lv_sub   TYPE anln2,
-
-        lt_ret   TYPE bapiret2_t,
-
-        ls_ret   TYPE bapiret2.
- 
-*==============================
-
-* Validation
-
-*==============================
-
-  IF iv_quantity <= 0.
-
-    APPEND VALUE #( type = 'E' message = 'Invalid quantity' ) TO et_return.
-
-    RETURN.
-
-  ENDIF.
- 
-*==============================
-
-* Fetch Plant + Material
-
-*==============================
-
-  SELECT SINGLE werks, matnr
-
-    INTO (@ls_eban-werks, @ls_eban-matnr)
-
-    FROM eban
-
-    WHERE banfn = @iv_pr
-
-      AND bnfpo = @iv_pr_item.
- 
-  IF sy-subrc <> 0 OR ls_eban-werks IS INITIAL OR ls_eban-matnr IS INITIAL.
-
-    APPEND VALUE #( type = 'E' message = 'PR data not found' ) TO et_return.
-
-    RETURN.
-
-  ENDIF.
- 
-*==============================
-
-* Prepare Input
-
-*==============================
-
-  ls_purchase_req-plant      = ls_eban-werks.
-
-  ls_purchase_req-material   = ls_eban-matnr.
-
-  ls_purchase_req-costcenter = iv_costcenter.
-
-  APPEND ls_purchase_req TO lt_purchase_req.
- 
-*==============================
+*--------------------------------------
 
 * Load Master Data
 
-*==============================
+*--------------------------------------
 
   lo_obj->select_data_for_assets(
 
@@ -630,140 +129,151 @@ FUNCTION zfm_asset_cr_and_pr_upd.
       it_purchase_req = lt_purchase_req
 
   ).
- 
-*==============================
 
-* Asset Creation Loop
+*--------------------------------------
 
-*==============================
+* Asset Creation with Split
 
-  DO iv_quantity TIMES.
- 
-    CLEAR: lv_asset, lv_sub, lt_ret, ls_ret.
- 
-    READ TABLE lt_purchase_req INTO ls_purchase_req INDEX 1.
- 
-    lo_obj->create_single_asset(
+*--------------------------------------
 
-      EXPORTING
+  LOOP AT it_cc_split INTO DATA(ls_cc).
 
-        is_purchase_req = ls_purchase_req
+    DO ls_cc-qty TIMES.
 
-        iv_commit       = space
+      CLEAR: lv_asset, lv_sub, lt_ret, ls_ret, lv_status.
 
-      IMPORTING
+      ls_purchase_req-costcenter = ls_cc-costcenter.
 
-        ev_asset        = lv_asset
+      CALL METHOD lo_obj->create_single_asset
 
-        ev_sub_num      = lv_sub
+        EXPORTING
 
-        et_return       = lt_ret ).
- 
-*------------------------------
+          is_purchase_req = ls_purchase_req
 
-* Result Handling
+*          iv_commit       = space
 
-*------------------------------
+        IMPORTING
 
-    DATA(lv_status) = 'S'.
- 
-    READ TABLE lt_ret INTO ls_ret WITH KEY type = 'E'.
+          ev_asset        = lv_asset
 
-    IF sy-subrc <> 0.
+          ev_sub_num      = lv_sub
 
-      READ TABLE lt_ret INTO ls_ret WITH KEY type = 'A'.
+          et_return       = lt_ret.
 
-    ENDIF.
+*--------------------------------------
 
-    IF sy-subrc <> 0.
+* Error Handling
 
-      READ TABLE lt_ret INTO ls_ret WITH KEY type = 'X'.
+*--------------------------------------
 
-    ENDIF.
- 
-    IF sy-subrc = 0.
+      lv_status = 'S'.
 
-      lv_status = 'E'.
+      READ TABLE lt_ret INTO ls_ret WITH KEY type = 'E'.
 
-    ENDIF.
- 
-    APPEND VALUE zsasset_create_out(
+      IF sy-subrc <> 0.
 
-      asset     = lv_asset
+        READ TABLE lt_ret INTO ls_ret WITH KEY type = 'A'.
 
-      subnumber = lv_sub
+      ENDIF.
 
-      status    = lv_status
+      IF sy-subrc <> 0.
 
-      message   = COND #( WHEN ls_ret IS NOT INITIAL THEN ls_ret-message ELSE 'Created successfully' )
+        READ TABLE lt_ret INTO ls_ret WITH KEY type = 'X'.
 
-    ) TO et_result.
- 
-    APPEND LINES OF lt_ret TO et_return.
- 
-*------------------------------
+      ENDIF.
 
-* Success Collection
+      IF sy-subrc = 0.
 
-*------------------------------
+        lv_status = 'E'.
 
-    IF lv_status = 'S' AND lv_asset IS NOT INITIAL.
+      ENDIF.
 
-      APPEND VALUE ty_asset(
+*--------------------------------------
 
-        asset = lv_asset
+* Append Result
 
-        cc    = iv_costcenter
+*--------------------------------------
 
-      ) TO lt_asset.
+      APPEND VALUE zsasset_create_out(
 
-    ENDIF.
- 
-  ENDDO.
- 
-*==============================
+        asset     = lv_asset
 
-* Evaluate Asset Creation
+        subnumber = lv_sub
 
-*==============================
+        status    = lv_status
 
-  DATA(lv_asset_success) = abap_false.
- 
-  IF lt_asset IS NOT INITIAL.
+        message   = COND #( WHEN ls_ret IS NOT INITIAL THEN ls_ret-message ELSE 'Created successfully' )
 
-    lv_asset_success = abap_true.
+      ) TO et_result.
 
-  ENDIF.
- 
-  IF lv_asset_success = abap_false.
+      APPEND LINES OF lt_ret TO et_return.
+
+*--------------------------------------
+
+* Collect Successful Assets
+
+*--------------------------------------
+
+      IF lv_status = 'S' AND lv_asset IS NOT INITIAL.
+
+        CLEAR ls_asset.
+
+        ls_asset-asset = lv_asset.
+
+        ls_asset-cc    = ls_cc-costcenter.
+
+        APPEND ls_asset TO lt_asset.
+
+      ENDIF.
+
+    ENDDO.
+
+  ENDLOOP.
+
+*--------------------------------------
+
+* Validate Asset Creation
+
+*--------------------------------------
+
+  IF lt_asset IS INITIAL.
 
     APPEND VALUE #( type = 'E' message = 'Asset creation failed. PR not updated.' ) TO et_return.
 
     RETURN.
 
   ENDIF.
- 
-*==============================
 
-* Commit Assets
+*--------------------------------------
 
-*==============================
+* Commit
 
-  CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+*--------------------------------------
 
-    EXPORTING
+*  CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+*
+*    EXPORTING
+*
+*      wait = 'X'.
 
-      wait = 'X'.
- 
-*==============================
+*--------------------------------------
 
 * PR Update
 
-*==============================
+*--------------------------------------
 
-  DATA(lv_res) TYPE string.
- 
-  lo_obj->update_purchase_requisition(
+  DATA lv_res TYPE string.
+  data lv_ebkn_count type EBKN-ZEBKN.
+*----------------------------------------------------
+*  calculating the assignments
+*----------------------------------------------------
+
+  SELECT count(*) into lv_ebkn_count
+    from ebkn
+    where banfn = iv_pr
+    and bnfpo = iv_pr_item.
+
+  CALL METHOD lo_obj->update_Purchase_requisition
 
     EXPORTING
 
@@ -771,65 +281,64 @@ FUNCTION zfm_asset_cr_and_pr_upd.
 
       iv_pr_item     = iv_pr_item
 
-      iv_aa_cat      = 'A'
-
-      iv_aa_number   = iv_assign
+*      iv_aa_cat      = 'A'
+*
+*      iv_aa_number   = iv_assign
 
       iv_asset       = lt_asset
 
       iv_isocode     = iv_isocode
 
-      iv_rfc_dest    = iv_rfc_dest
+      iv_rfc_dest    = 'ZRFC_FIAF27_API_PUR_REQ'
 
-      iv_assignments = iv_assign
+      iv_assignments = lv_ebkn_count
 
     RECEIVING
 
-      ev_res         = lv_res ).
- 
-*==============================
+      ev_res         = lv_res.
 
-* Check PR Update Result
+*--------------------------------------
 
-*==============================
+* Check PR Update
 
-  DATA(lv_pr_success) = abap_true.
- 
+*--------------------------------------
+
+  DATA lv_pr_success TYPE abap_bool VALUE abap_true.
+
   IF lv_res IS INITIAL OR lv_res(3) < '200' OR lv_res(3) >= '300'.
 
     lv_pr_success = abap_false.
 
   ENDIF.
- 
-*==============================
 
-* Store failed PR updates
-
-*==============================
+*--------------------------------------
+*
+* Store Failed Updates
+*
+*--------------------------------------
 
   IF lv_pr_success = abap_false.
- 
-    LOOP AT lt_asset INTO DATA(ls_asset_row).
- 
-      INSERT zactiv_fijo FROM VALUE #(
 
-        pr         = iv_pr
+    DATA ls_z TYPE ZTACTIVOS_FIJOS.
 
-        pr_item    = iv_pr_item
+    LOOP AT lt_asset INTO ls_asset.
 
-        asset      = ls_asset_row-asset
+      CLEAR ls_z.
 
-        costcenter = ls_asset_row-cc
+      ls_z-banfn        = iv_pr.
 
-        status     = 'P'
+      ls_z-bnfpo    = iv_pr_item.
 
-        created_on = sy-datum
+      ls_z-anln1    = ls_asset-asset.
 
-      ).
- 
+      ls_z-kostl = ls_asset-cc.
+
+      ls_z-last_changed_at = sy-datum.
+
+      INSERT ZTACTIVOS_FIJOS FROM ls_z.
+
     ENDLOOP.
- 
+
   ENDIF.
- 
+
 ENDFUNCTION.
- 
