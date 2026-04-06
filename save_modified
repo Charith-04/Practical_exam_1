@@ -1,54 +1,235 @@
-METHOD save_modified.
- 
+  METHOD save_modified.
+
   DATA: lt_return TYPE ztt_bapiret2,
 
         lt_result TYPE zttasset_create_out.
- 
+
+*--------------------------------------
+
+* Cost center split structure
+
+*--------------------------------------
+
+  TYPES: BEGIN OF ty_cc_split,
+
+           costcenter TYPE kostl,
+
+           qty        TYPE ebkn-menge,
+
+         END OF ty_cc_split.
+
+  TYPES: ty_t_cc_split TYPE STANDARD TABLE OF ty_cc_split WITH EMPTY KEY.
+
+*--------------------------------------
+
+* Group structure
+
+*--------------------------------------
+
+  TYPES: BEGIN OF ty_group,
+
+           pr          TYPE i_purchaserequisitionitem-purchaserequisition,
+
+           pr_item     TYPE i_purchaserequisitionitem-purchaserequisitionitem,
+
+           total_qty   TYPE ebkn-menge,
+
+           description TYPE ztactivos_fijos-comentario,
+
+           isocode     TYPE a_purchaserequisitionitem_2-baseunitisocode,
+
+           assign      TYPE ebkn-zebkn,
+
+           cc_split    TYPE ty_t_cc_split,
+
+         END OF ty_group.
+
+  DATA: lt_group TYPE STANDARD TABLE OF ty_group,
+
+        ls_group TYPE ty_group.
+
+*--------------------------------------
+
+* Build grouping + split
+
+*--------------------------------------
+
+  LOOP AT gt_pr_data INTO DATA(ls_data).
+
+    READ TABLE lt_group ASSIGNING FIELD-SYMBOL(<ls_group>)
+
+      WITH KEY
+
+        pr      = ls_data-purchaserequisition
+
+        pr_item = ls_data-purchaserequisitionitem.
+
+    IF sy-subrc = 0.
+
+      <ls_group>-total_qty = <ls_group>-total_qty + ls_data-quantity.
+
+      APPEND VALUE #(
+
+        costcenter = ls_data-costcenter
+
+        qty        = ls_data-quantity
+
+      ) TO <ls_group>-cc_split.
+
+
+
+    ELSE.
+
+      CLEAR ls_group.
+
+      ls_group-pr          = ls_data-purchaserequisition.
+
+      ls_group-pr_item     = ls_data-purchaserequisitionitem.
+
+      ls_group-total_qty   = ls_data-quantity.
+
+      ls_group-description = ls_data-comentario.
+
+      ls_group-isocode     = ls_data-baseunitisocode.
+
+      ls_group-assign      = ls_data-purchasereqnacctassgmtnumber.
+
+      APPEND VALUE #(
+
+        costcenter = ls_data-costcenter
+
+        qty        = ls_data-quantity
+
+      ) TO ls_group-cc_split.
+
+      APPEND ls_group TO lt_group.
+
+    ENDIF.
+
+  ENDLOOP.
+
+*--------------------------------------
+
+* Call FM once per PR item
+
+*--------------------------------------
+
   DATA: lt_return_all TYPE ztt_bapiret2,
 
         lt_result_all TYPE zttasset_create_out.
- 
-  IF gt_pr_data IS NOT INITIAL.
- 
-    LOOP AT gt_pr_data INTO DATA(ls_data).
- 
-      CALL FUNCTION 'ZFM_ASSET_CR_AND_PR_UPD'
 
-        EXPORTING
+  LOOP AT lt_group INTO ls_group.
 
-          iv_pr          = ls_data-purchaserequisition
+    DATA: lt_return_fm TYPE ztt_bapiret2,
 
-          iv_pr_item     = ls_data-purchaserequisitionitem
+          lt_result_fm TYPE zttasset_create_out.
 
-          iv_quantity    = ls_data-quantity
+    CALL FUNCTION 'ZFM_ASSET_CR_AND_PR_UPD' DESTINATION 'NONE'
 
-          iv_description = ls_data-comentario
+      EXPORTING
 
-          iv_costcenter  = ls_data-costcenter
+        iv_pr          = ls_group-pr
 
-          iv_isocode     = ls_data-baseunitisocode
+        iv_pr_item     = ls_group-pr_item
 
-          iv_assign      = ls_data-purchasereqnacctassgmtnumber
+        iv_quantity    = ls_group-total_qty
 
-        IMPORTING
+        iv_description = ls_group-description
 
-          et_return      = DATA(lt_return_fm)
+        iv_isocode     = ls_group-isocode
 
-          et_result      = DATA(lt_result_fm).
- 
-      APPEND LINES OF lt_return_fm TO lt_return_all.
+        iv_assign      = ls_group-assign
 
-      APPEND LINES OF lt_result_fm TO lt_result_all.
- 
-    ENDLOOP.
- 
-  ENDIF.
- 
+
+
+      IMPORTING
+
+        et_return      = lt_return_fm
+
+        et_result      = lt_result_fm
+          TABLES
+
+        it_cc_split    = ls_group-cc_split.   " <-- NEW
+*        EXCEPTIONS
+*        system_FAILURE = 1 MESSAGE lv_rfc_msg
+*        commUNICATION_FAILURE = 2 MESSAGE lv_rfc_msg
+*        resource_failure = 3
+*        otHERS = 4.
+
+
+    APPEND LINES OF lt_return_fm TO lt_return_all.
+
+    APPEND LINES OF lt_result_fm TO lt_result_all.
+
+  ENDLOOP.
+
   lt_return = lt_return_all.
 
   lt_result = lt_result_all.
- 
+
   CLEAR gt_pr_data.
- 
-ENDMETHOD.
- 
+
+LOOP AT lt_return_all INTO DATA(ls_return).
+DATA(lv_severity) = COND #(
+WHEN ls_return-type = 'E' OR ls_return-type = 'A' THEN if_abap_behv_message=>severity-error
+WHEN ls_return-type = 'W' THEN if_abap_behv_message=>severity-warning
+ELSE if_abap_behv_message=>severity-success
+).
+DATA(lo_msg) = new_message( id = ls_return-id number = ls_return-number severity = lv_severity
+v1 =  ls_return-message_v1
+v2 = ls_return-message_v2
+v3 = ls_return-message_v3
+v4 = ls_return-message_v4 ).
+
+APPEND  lo_msg TO reported-%other.
+
+ENDLOOP.
+    "data(lo_dest) = cl_bgmc_process_factory
+
+    "==========
+*    DATA: lt_return TYPE ztt_bapiret2,
+*          lt_result TYPE zttasset_create_out,
+*          lt_tab TYPE ZTT_purchase_req,
+*          wa_tab type ZSPURCHASE_REQ.
+*
+*    IF gt_pr_data IS NOT INITIAL.
+*      LOOP AT gt_pr_data INTO DATA(ls_data).
+*      wa_tab-accountassignmentcategory = ls_data-accountassignmentcategory.
+*      wa_tab-baseunitisocode = ls_data-baseunitisocode.
+*      wa_tab-comentario = ls_data-comentario.
+*      wa_tab-costcenter = ls_data-costcenter.
+*      wa_tab-masterfixedasset = ls_data-masterfixedasset.
+*      wa_tab-material = ls_data-material.
+*      wa_tab-plant = ls_data-plant.
+*      wa_tab-purchasereqnacctassgmtnumber = ls_data-purchasereqnacctassgmtnumber.
+*      wa_tab-purchaserequisition = ls_Data-purchaserequisition.
+*      wa_tab-purchaserequisitionitem = ls_data-purchaserequisitionitem.
+*      wa_tab-purchaserequisitiontype = ls_data-purchaserequisitiontype.
+*      wa_tab-purchasinggroup = ls_data-purchasinggroup.
+*      wa_tab-purreqnitemcurrency = ls_data-purreqnitemcurrency.
+*      wa_tab-purreqnnetamount = ls_data-purreqnnetamount.
+*      wa_tab-quantity = ls_data-quantity.
+*      wa_tab-supplier = ls_data-supplier.
+*      wa_tab-wbselementinternalid = ls_data-wbselementinternalid.
+*      APPEND wa_tab TO lt_tab.
+*      ENDLOOP.
+*      Loop at gt_pr_data into data(ls_data1).
+*        CALL FUNCTION 'ZFM_ASSET_CR_AND_PR_UPD'
+*          EXPORTING
+*            iv_pr          = ls_data1-purchaserequisition
+*            iv_pr_item     = ls_data1-purchaserequisitionitem
+*            iv_quantity    = ls_data1-quantity
+*            iv_description = ls_data1-comentario
+*            iv_costcenter  = ls_data1-costcenter
+*            iv_isocode     = ls_data1-baseunitisocode
+*            iv_assign      = ls_data1-purchasereqnacctassgmtnumber
+*          IMPORTING
+*            et_return      = lt_return
+*            et_result      = lt_result
+*          TABLES
+*            lt_table       = lt_tab.
+*    ENDLOOP.
+*    ENDIF.
+*    CLEAR gt_pr_data.
+
+  ENDMETHOD.
