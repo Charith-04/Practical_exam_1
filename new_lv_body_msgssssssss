@@ -1,0 +1,64 @@
+DATA(lv_pos1) TYPE i.
+
+DATA(lv_pos2) TYPE i.
+ 
+" Find sap-messages block
+
+FIND 'sap-messages:' IN lv_body MATCH OFFSET lv_pos1.
+
+IF sy-subrc = 0.
+
+  " Find message value after it
+
+  FIND FIRST OCCURRENCE OF REGEX '"message":"([^"]+)"'
+
+    IN lv_body
+
+    MATCH OFFSET lv_pos1
+
+    SUBMATCHES ev_body.
+
+ENDIF.
+
+
+
+LOOP AT lt_result_fm INTO DATA(ls_result).
+
+  IF ls_result-status = 'S'.
+
+    APPEND VALUE #(
+
+      type    = 'S'
+
+      message = |Asset { ls_result-asset } created and assigned successfully|
+
+    ) TO lt_return_all.
+
+  ELSE.
+
+    APPEND VALUE #(
+
+      type    = 'E'
+
+      message = |Asset creation failed: { ls_result-message }|
+
+    ) TO lt_return_all.
+
+  ENDIF.
+
+ENDLOOP.
+ 
+" PR update message
+
+IF lv_body IS NOT INITIAL.
+
+  APPEND VALUE #(
+
+    type    = 'S'
+
+    message = lv_body   " the extracted SAP message text
+
+  ) TO lt_return_all.
+
+ENDIF.
+ 
