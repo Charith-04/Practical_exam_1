@@ -1,0 +1,74 @@
+--CD212BB999009592F0E5737D8F99965A0
+Content-Type: application/http
+Content-Length: 2751
+content-transfer-encoding: binary
+
+HTTP/1.1 200 OK
+Content-Type: application/json;odata.metadata=minimal;charset=utf-8
+Content-Length: 2507
+odata-version: 4.0
+etag: W/"SADL-202604070735323819630C~20260407073532.3819630"
+cache-control: no-cache, no-store, must-revalidate
+
+{"@odata.context":"$metadata#PurchaseReqnItem/$entity","@odata.metadataEtag":"W/\"20260318212505\"","@odata.etag":"W/\"SADL-202604070735323819630C~20260407073532.3819630\"","PurchaseRequisition":"40000164","PurchaseRequisitionItem":"20","PurchasingDocument":"","PurchasingDocumentItem":"0","PurReqnReleaseStatus":"05","PurchasingDocumentSubtype":"","PurchasingDocumentItemCategory":"0","PurchaseRequisitionItemText":"Caja Fuerte","AccountAssignmentCategory":"Y","Material":"000000000000100004","MaterialGroup":"GA007","RequestedQuantity":10,"BaseUnit":"ST","BaseUnitISOCode":"PCE","PurchaseRequisitionPrice":20000.00,"PurReqnPriceQuantity":1,"MaterialGoodsReceiptDuration":0,"PurchasingOrganization":"","PurchasingGroup":"HON","Plant":"HN01","CompanyCode":"HN01","SourceOfSupplyIsAssigned":false,"SupplyingPlant":"","OrderedQuantity":0,"DeliveryDate":"2026-02-03","ProcessingStatus":"N","ExternalApprovalStatus":"","PurchasingInfoRecord":"","Supplier":"","IsDeleted":false,"FixedSupplier":"","RequisitionerName":"","CreatedByUser":"90009524","PurReqCreationDate":"2026-02-03","PurReqnItemCurrency":"USD","MaterialPlannedDeliveryDurn":0,"DelivDateCategory":"1","MultipleAcctAssgmtDistribution":"","StorageLocation":"","PurReqnSSPRequestor":"","PurReqnSSPAuthor":"","PurchaseContract":"","PurReqnSourceOfSupplyType":"","PurchaseContractItem":"0","ConsumptionPosting":"V","PurReqnOrigin":"R","PurReqnSSPCatalog":"","PurReqnSSPCatalogItem":"","PurReqnSSPCrossCatalogItem":0,"PurReqnItemBlockingStatus":"","PurReqnItemBlockingReasonText":"","Language":"ES","IsClosed":false,"ReleaseIsNotCompleted":false,"ServicePerformer":"","ProductTypeCode":"1","PerformancePeriodStartDate":null,"PerformancePeriodEndDate":null,"PurchaseOrderPriceType":"","SupplierMaterialNumber":"","Batch":"","MaterialRevisionLevel":"","MinRemainingShelfLife":0,"ItemNetAmount":200000.00,"TaxCode":"","GoodsReceiptIsExpected":true,"InvoiceIsExpected":true,"GoodsReceiptIsNonValuated":false,"RequirementTracking":"","MRPController":"","PurchaseRequisitionIsFixed":false,"LastChangeDateTime":"2026-04-07T07:35:32.381963Z","Reservation":"0","ItemDeliveryAddressID":"","PurReqnReceivingCustomer":"","Subcontractor":"","ExpectedOverallLimitAmount":0.00,"OverallLimitAmount":0.00,"PurContractForOverallLimit":"","PurContractItemForOverallLimit":"0","PurReqnExternalReference":"","PurReqnItemExternalReference":"","PurReqnExternalSystemId":"","ProcurementHubSourceSystem":"","SSPAuthorExternalBPIdnNumber":"","SSPReqrUserId":"","SAP__Messages":[]}
+--CD212BB999009592F0E5737D8F99965A0
+Content-Type: multipart/mixed; boundary=CD212BB999009592F0E5737D8F99965A1
+Content-Length:        21003
+
+--CD212BB999009592F0E5737D8F99965A1
+Content-Type: application/http
+Content-Length: 2868
+content-transfer-encoding: binary
+content-id: 1
+
+HTTP/1.1 200 OK
+Content-Type: application/json;odata.metadata=minimal;charset=utf-8
+Content-Length: 2506
+odata-version: 4.0
+etag: W/"SADL-202604070740278223340C~20260407074027.8223340"
+cache-control: no-cache, no-store, must-revalidate
+sap-messages: [{"code":"06/403","message":"La solicitud de pedido 40000164 ha sido modificada","numericSeverity":1}]
+
+{"@odata.context":"$metadata#PurchaseReqnItem/$entity","@odata.metadataEtag":"W/\"20260318212505\"","@odata.etag":"W/\"SADL-202604070740278223340C~20260407074027.8223340\"","PurchaseRequisition":"40000164","PurchaseRequisitionItem":"20","PurchasingDocument":"","PurchasingDocumentItem":"0","PurReqnReleaseStatus":"03","PurchasingDocumentSubtype":"","PurchasingDocumentItemCategory":"0","PurchaseRequisitionItemText":"Caja Fuerte","AccountAssignmentCategory":"A","Material":"000000000000100004","MaterialGroup":"GA007","RequestedQuantity":10,"BaseUnit":"ST","BaseUnitISOCode":"PCE","PurchaseRequisitionPrice":20000.00,"PurReqnPriceQuantity":1,"MaterialGoodsReceiptDuration":0,"PurchasingOrganization":"","PurchasingGroup":"HON","Plant":"HN01","CompanyCode":"HN01","SourceOfSupplyIsAssigned":false,"SupplyingPlant":"","OrderedQuantity":0,"DeliveryDate":"2026-02-03","ProcessingStatus":"N","ExternalApprovalStatus":"","PurchasingInfoRecord":"","Supplier":"","IsDeleted":false,"FixedSupplier":"","RequisitionerName":"","CreatedByUser":"90009524","PurReqCreationDate":"2026-02-03","PurReqnItemCurrency":"USD","MaterialPlannedDeliveryDurn":0,"DelivDateCategory":"1","MultipleAcctAssgmtDistribution":"1","StorageLocation":"","PurReqnSSPRequestor":"","PurReqnSSPAuthor":"","PurchaseContract":"","PurReqnSourceOfSupplyType":"","PurchaseContractItem":"0","ConsumptionPosting":"A","PurReqnOrigin":"R","PurReqnSSPCatalog":"","PurReqnSSPCatalogItem":"","PurReqnSSPCrossCatalogItem":0,"PurReqnItemBlockingStatus":"","PurReqnItemBlockingReasonText":"","Language":"ES","IsClosed":false,"ReleaseIsNotCompleted":true,"ServicePerformer":"","ProductTypeCode":"1","PerformancePeriodStartDate":null,"PerformancePeriodEndDate":null,"PurchaseOrderPriceType":"","SupplierMaterialNumber":"","Batch":"","MaterialRevisionLevel":"","MinRemainingShelfLife":0,"ItemNetAmount":200000.00,"TaxCode":"","GoodsReceiptIsExpected":true,"InvoiceIsExpected":true,"GoodsReceiptIsNonValuated":true,"RequirementTracking":"","MRPController":"","PurchaseRequisitionIsFixed":false,"LastChangeDateTime":"2026-04-07T07:40:27.822334Z","Reservation":"0","ItemDeliveryAddressID":"","PurReqnReceivingCustomer":"","Subcontractor":"","ExpectedOverallLimitAmount":0.00,"OverallLimitAmount":0.00,"PurContractForOverallLimit":"","PurContractItemForOverallLimit":"0","PurReqnExternalReference":"","PurReqnItemExternalReference":"","PurReqnExternalSystemId":"","ProcurementHubSourceSystem":"","SSPAuthorExternalBPIdnNumber":"","SSPReqrUserId":"","SAP__Messages":[]}
+--CD212BB999009592F0E5737D8F99965A1
+Content-Type: application/http
+Content-Length: 1530
+content-transfer-encoding: binary
+content-id: 2
+
+HTTP/1.1 200 OK
+Content-Type: application/json;odata.metadata=minimal;charset=utf-8
+Content-Length: 1286
+odata-version: 4.0
+etag: W/"SADL-202604070740278223340C~20260407074027.8223340"
+cache-control: no-cache, no-store, must-revalidate
+
+{"@odata.context":"$metadata#PurchaseReqnAcctAssgmt/$entity","@odata.metadataEtag":"W/\"20260318212505\"","@odata.etag":"W/\"SADL-202604070740278223340C~20260407074027.8223340\"","PurchaseRequisition":"40000164","PurchaseRequisitionItem":"20","PurchaseReqnAcctAssgmtNumber":"1","CostCenter":"","MasterFixedAsset":"30000002008","ProjectNetwork":"","BaseUnit":"ST","BaseUnitISOCode":"PCE","Quantity":1,"MultipleAcctAssgmtDistrPercent":10.0,"PurReqnItemCurrency":"USD","PurReqnNetAmount":0.00,"IsDeleted":false,"GLAccount":"2078710098","BusinessArea":"","SalesOrder":"","SalesOrderItem":"0","SalesOrderScheduleLine":"0","FixedAsset":"0","OrderID":"","UnloadingPointName":"","ControllingArea":"HN00","CostObject":"","ProfitCenter":"1100001","ProjectNetworkInternalID":"0","CommitmentItem":"","FundsCenter":"","Fund":"","FunctionalArea":"","CreationDate":null,"GoodsRecipientName":"","REInternalFinNumber":"","NetworkActivityInternalID":"0","PartnerAccountNumber":"","JointVentureRecoveryCode":"","SettlementReferenceDate":null,"OrderInternalID":"0","OrderIntBillOfOperationsItem":"0","EarmarkedFundsDocument":"","CostCtrActivityType":"","BusinessProcess":"","GrantID":"","ValidityDate":"2026-04-07","ChartOfAccounts":"PCHN","WBSElementExternalID":"","NetworkActivity":"","SAP__Messages":[]}
+--CD212BB999009592F0E5737D8F99965A1
+Content-Type: application/http
+Content-Length: 1663
+content-transfer-encoding: binary
+content-id: 3
+
+HTTP/1.1 201 Created
+Content-Type: application/json;odata.metadata=minimal;charset=utf-8
+Content-Length: 1286
+location: PurchaseReqnAcctAssgmt(PurchaseRequisition='40000164',PurchaseRequisitionItem='20',PurchaseReqnAcctAssgmtNumber='2')
+odata-version: 4.0
+etag: W/"SADL-202604070740278223340C~20260407074027.8223340"
+cache-control: no-cache, no-store, must-revalidate
+
+{"@odata.context":"$metadata#PurchaseReqnAcctAssgmt/$entity","@odata.metadataEtag":"W/\"20260318212505\"","@odata.etag":"W/\"SADL-202604070740278223340C~20260407074027.8223340\"","PurchaseRequisition":"40000164","PurchaseRequisitionItem":"20","PurchaseReqnAcctAssgmtNumber":"2","CostCenter":"","MasterFixedAsset":"30000002009","ProjectNetwork":"","BaseUnit":"ST","BaseUnitISOCode":"PCE","Quantity":1,"MultipleAcctAssgmtDistrPercent":10.0,"PurReqnItemCurrency":"USD","PurReqnNetAmount":0.00,"IsDeleted":false,"GLAccount":"2078710098","BusinessArea":"","SalesOrder":"","SalesOrderItem":"0","SalesOrderScheduleLine":"0","FixedAsset":"0","OrderID":"","UnloadingPointName":"","ControllingArea":"HN00","CostObject":"","ProfitCenter":"1100001","ProjectNetworkInternalID":"0","CommitmentItem":"","FundsCenter":"","Fund":"","FunctionalArea":"","CreationDate":null,"GoodsRecipientName":"","REInternalFinNumber":"","NetworkActivityInternalID":"0","PartnerAccountNumber":"","JointVentureRecoveryCode":"","SettlementReferenceDate":null,"OrderInternalID":"0","OrderIntBillOfOperationsItem":"0","EarmarkedFundsDocument":"","CostCtrActivityType":"","BusinessProcess":"","GrantID":"","ValidityDate":"2026-04-07","ChartOfAccounts":"PCHN","WBSElementExternalID":"","NetworkActivity":"","SAP__Messages":[]}
+--CD212BB999009592F0E5737D8F99965A1
+Content-Type: application/http
+Content-Length: 1663
+content-transfer-encoding: binary
+content-id: 4
+
+HTTP/1.1 201 Created
+Content-Type: application/json;odata.metadata=minimal;charset=utf-8
+Content-Length: 1286
+location: PurchaseReqnAcctAssgmt(PurchaseRequisition='40000164',PurchaseRequisitionItem='20',PurchaseReqnAcctAssgmtNumber='3')
+odata-version: 4.0
+etag: W/"SADL-202604070740278223340C~20260407074027.8223340"
+cache-control...
